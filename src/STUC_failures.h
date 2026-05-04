@@ -1,0 +1,8 @@
+X(FAIL_Message_ChecksumWrong            )
+X(FAIL_Message_CommandIdInvalid         )
+X(FAIL_Message_MessageIdInvalid         )
+X(FAIL_Message_NotFound                 )
+X(FAIL_Message_OwnDeviceIdWrong         )
+X(FAIL_Message_RemoteDeviceIdInvalid    )
+X(FAIL_Message_ResultWrong              ) 
+X(FAIL_Message_TimestampInvalid         )

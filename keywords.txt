@@ -1,0 +1,45 @@
+#######################################
+# Syntax Coloring Map For STUC
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+STUC			KEYWORD1
+StucData		KEYWORD1
+EStucAction		KEYWORD1
+EStucChecksumType	KEYWORD1
+EStucMessageResult	
+EStucMessageType	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+AnalyseMessage		KEYWORD2
+CalcHeaderSize		KEYWORD2
+CalcTrailerSize		KEYWORD2
+CheckConfig		KEYWORD2
+ComposeMessage		KEYWORD2
+ComposeRequest		KEYWORD2
+ComposeReply		KEYWORD2
+GetChecksumLength	KEYWORD2
+GetResultText		KEYWORD2
+IsChecksumValid		KEYWORD2
+PrintConfig		KEYWORD2
+ReadConfigFromEEPROM	KEYWORD2
+UpdateTimestamp		KEYWORD2
+WriteConfigToEEPROM	KEYWORD2
+
+Clear		KEYWORD2
+SetPayloadInfo	KEYWORD2
+
+#######################################
+# Instances (KEYWORD2)
+#######################################
+
+
+#######################################
+# Constants (LITERAL1)
+#######################################
