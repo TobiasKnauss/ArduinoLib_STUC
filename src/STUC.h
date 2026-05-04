@@ -5,7 +5,6 @@
 #include <EEPROM.h>
 #include <FastCRC.h>
 
-#include <CONSTS.h>
 #include <MemoryTools.h>
 #include <Result.h>
 #include "EStucAction.h"
@@ -58,8 +57,8 @@ public:
 //==================== Fields ====================
 private:
   static const uint8_t c_EepromConfigSize = 8;
-  static const uint8_t c_MessageStartID = CONSTS::STX;
-  static const uint8_t c_MessageEndID   = CONSTS::ETX;
+  static const uint8_t c_MessageStartID = 0x02;  // STX
+  static const uint8_t c_MessageEndID   = 0x03;  // ETX
   static const uint8_t c_Version = 0x01;
   static const uint8_t c_HeaderMinLength  = 7;   // STX:1, Version:1, Flags:1, CommandID:2, Result:1, PayloadLength:1
   static const uint8_t c_TrailerMinLength = 1;   // ETX:1
