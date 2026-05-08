@@ -2,23 +2,20 @@
 #define STUC_h
 
 #include <Arduino.h>
-#include <EEPROM.h>
 #include <FastCRC.h>
+#include <Streaming.h>
 
 #include <MemoryTools.h>
 #include <Result.h>
-#include "EStucAction.h"
-#include "EStucChecksumType.h"
-#include "EStucMessageResult.h"
-#include "EStucMessageType.h"
-#include "StucData.h"
 
-//--------------------------------------------------------------------
+class StucData;
+
 // STUC: Sir Toby's Universal Communication Protocol
-// The STUC protocol defines the structure and content of data packets
-// that are exchanged between microcontrollers and/or computers.
-//--------------------------------------------------------------------
 //
+// The STUC protocol defines the structure and content of data packets that are exchanged between microcontrollers and/or computers.
+class STUC
+{
+//--------------------------------------------------------------------
 //          Offset        Length    Data
 //           0               1.0    STX char
 //           1               1.0    Version (= 1)
@@ -41,8 +38,7 @@
 //  + PDL    7 - 21+PDL  0.0-4.0    Checksum, Length ("CL"): 0/1/2/4
 //  + CL     7 - 25+PDL      1.0    ETX char
 //--------------------------------------------------------------------
-class STUC
-{
+
 //==================== Enums ====================
 public:
   #define X(name) name,
@@ -53,6 +49,35 @@ public:
     Dummy_LastClassFailure
   };
   #undef X
+
+  enum class EAction : uint8_t
+  {
+    None  = 0,
+    Read  = 1,
+    Write = 2
+  };
+
+  enum class EChecksumType : uint8_t
+  {
+    None  = 0,
+    CRC8  = 1,
+    CRC16 = 2,
+    CRC32 = 3
+  };
+
+  enum class EMessageResult : uint8_t
+  {
+    None       = 0,
+    Success    = 1,
+    InProgress = 2,
+  };
+
+  enum class EMessageType : uint8_t
+  {
+    None    = 0,
+    Request = 1,
+    Reply   = 2
+  };
 
 //==================== Fields ====================
 private:
@@ -80,16 +105,16 @@ private:
   #include "STUC_failures.h"
   #undef X
 
-  EStucChecksumType m_ChecksumType;
-  uint32_t          m_DeviceId;
-  bool              m_DeviceIdsUsed;
-  bool              m_MessageIdUsed;
-  bool              m_TimestampUsed;
+  EChecksumType m_ChecksumType  = EChecksumType::None;
+  uint32_t      m_DeviceId      = 0;
+  bool          m_DeviceIdsUsed = false;
+  bool          m_MessageIdUsed = false;
+  bool          m_TimestampUsed = false;
 
-  uint32_t          m_MessageId       = 0;
-  uint32_t          m_SecondsSinceMillis0_LastValue = 0;
-  uint32_t          m_TimestampOffset = 0;
-  uint32_t          m_Timestamp       = 0;
+  uint32_t      m_MessageId       = 0;
+  uint32_t      m_SecondsSinceMillis0_LastValue = 0;
+  uint32_t      m_TimestampOffset = 0;
+  uint32_t      m_Timestamp       = 0;
 
   FastCRC8  m_Crc8;
   FastCRC16 m_Crc16;
@@ -100,26 +125,26 @@ public:
   STUC (uint16_t    i_EepromOffset,
         ::EResult&  o_Result);
 
-  STUC (bool              i_DeviceIdsUsed,
-        bool              i_MessageIdUsed,
-        bool              i_TimestampUsed,
-        uint32_t          i_DeviceId,
-        EStucChecksumType i_ChecksumTypet,
-        ::EResult&        o_Result);
+  STUC (bool          i_DeviceIdsUsed,
+        bool          i_MessageIdUsed,
+        bool          i_TimestampUsed,
+        uint32_t      i_DeviceId,
+        EChecksumType i_ChecksumTypet,
+        ::EResult&    o_Result);
 
 //==================== Public Methods ====================
 public:
-  static uint8_t GetChecksumLength (EStucChecksumType i_ChecksumType);
-  static bool IsChecksumValid (EStucChecksumType i_ChecksumType);
+  static uint8_t GetChecksumLength (EChecksumType i_ChecksumType);
+  static bool IsChecksumValid (EChecksumType i_ChecksumType);
 
   static const __FlashStringHelper* GetResultText (::EResult i_Result);
 
-  ::EResult AnalyseMessage (uint8_t*          i_pRingBuffer,
-                            uint16_t          i_RingBufferLength,
-                            uint16_t&         io_RingBufferStartIndex,
-                            StucData&         io_Data,
-                            EStucMessageType& o_MessageType,
-                            uint8_t&          o_MessageLength);
+  ::EResult AnalyseMessage (uint8_t*      i_pRingBuffer,
+                            uint16_t      i_RingBufferLength,
+                            uint16_t&     io_RingBufferStartIndex,
+                            StucData&     io_Data,
+                            EMessageType& o_MessageType,
+                            uint8_t&      o_MessageLength);
 
   ::EResult ComposeRequest (StucData& i_Data,
                             uint8_t*  i_pMessageBuffer,
@@ -144,8 +169,8 @@ private:
                             bool      i_MessageIsReply);
 
 
-  static ::EResult CheckConfig (uint32_t          i_DeviceId,
-                                EStucChecksumType i_ChecksumType);
+  static ::EResult CheckConfig (uint32_t      i_DeviceId,
+                                EChecksumType i_ChecksumType);
 
 public:
   void PrintConfig ();

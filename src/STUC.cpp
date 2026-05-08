@@ -1,5 +1,6 @@
+#include <EEPROM.h>
 #include "STUC.h"
-#include <Streaming.h>
+#include "StucData.h"
 
 //--------------------------------------------------------------------
 #define X(name) const char STUC::_EResult_##name[] PROGMEM = #name;
@@ -22,12 +23,12 @@ STUC::STUC (uint16_t    i_EepromOffset,
 }
 
 //--------------------------------------------------------------------
-STUC::STUC (bool              i_DeviceIdsUsed,
-            bool              i_MessageIdUsed,
-            bool              i_TimestampUsed,
-            uint32_t          i_DeviceId,
-            EStucChecksumType i_ChecksumType,
-            ::EResult&        o_Result)
+STUC::STUC (bool          i_DeviceIdsUsed,
+            bool          i_MessageIdUsed,
+            bool          i_TimestampUsed,
+            uint32_t      i_DeviceId,
+            EChecksumType i_ChecksumType,
+            ::EResult&    o_Result)
 {
   o_Result = CheckConfig (i_DeviceId, i_ChecksumType);
   if (o_Result != ::EResult::SUCCESS)
@@ -41,21 +42,21 @@ STUC::STUC (bool              i_DeviceIdsUsed,
 }
 
 //--------------------------------------------------------------------
-uint8_t STUC::GetChecksumLength (EStucChecksumType i_ChecksumType)
+uint8_t STUC::GetChecksumLength (EChecksumType i_ChecksumType)
 {
   switch (i_ChecksumType)
   {
-  case EStucChecksumType::CRC8 : return 1;
-  case EStucChecksumType::CRC16: return 2;
-  case EStucChecksumType::CRC32: return 4;
-  default:                       return 0;
+  case EChecksumType::CRC8 : return 1;
+  case EChecksumType::CRC16: return 2;
+  case EChecksumType::CRC32: return 4;
+  default:                   return 0;
   }
 }
 
 //--------------------------------------------------------------------
-bool STUC::IsChecksumValid (EStucChecksumType i_ChecksumType)
+bool STUC::IsChecksumValid (EChecksumType i_ChecksumType)
 {
-  return i_ChecksumType == EStucChecksumType::None
+  return i_ChecksumType == EChecksumType::None
       || GetChecksumLength (i_ChecksumType) > 0;
 }
 
@@ -68,12 +69,12 @@ const __FlashStringHelper* STUC::GetResultText (::EResult i_Result)
 }
 
 //--------------------------------------------------------------------
-EResult STUC::AnalyseMessage (uint8_t*          i_pRingBuffer,
-                              uint16_t          i_RingBufferLength,
-                              uint16_t&         io_RingBufferStartIndex,
-                              StucData&         io_Data,
-                              EStucMessageType& o_MessageType,
-                              uint8_t&          o_MessageLength)
+EResult STUC::AnalyseMessage (uint8_t*      i_pRingBuffer,
+                              uint16_t      i_RingBufferLength,
+                              uint16_t&     io_RingBufferStartIndex,
+                              StucData&     io_Data,
+                              EMessageType& o_MessageType,
+                              uint8_t&      o_MessageLength)
 {
   if (i_pRingBuffer == 0)
     return ::EResult::FAIL_Pointer_IsZero;
@@ -84,7 +85,7 @@ EResult STUC::AnalyseMessage (uint8_t*          i_pRingBuffer,
 
   io_Data.Clear ();
   io_Data.PayloadLength = 0;
-  o_MessageType   = EStucMessageType::None;
+  o_MessageType   = EMessageType::None;
   o_MessageLength = 0;
 
   // Execute multiple attempts to search the start of the message:
@@ -123,10 +124,10 @@ EResult STUC::AnalyseMessage (uint8_t*          i_pRingBuffer,
       return ::EResult::FAIL_Buffer_GetValue;
 
     // Flag: MessageType
-    o_MessageType = (flags >> c_FlagIndex_MessageType) & 0x01 ? EStucMessageType::Reply : EStucMessageType::Request;
+    o_MessageType = (flags >> c_FlagIndex_MessageType) & 0x01 ? EMessageType::Reply : EMessageType::Request;
 
     // Flag: Action
-    io_Data.Action = (flags >> c_FlagIndex_Action) & 0x01 ? EStucAction::Write : EStucAction::Read;
+    io_Data.Action = (flags >> c_FlagIndex_Action) & 0x01 ? STUC::EAction::Write : STUC::EAction::Read;
 
     // Flag: DeviceIdsUsed
     if (flags & 1 << c_FlagIndex_DeviceIdsUsed)
@@ -134,13 +135,13 @@ EResult STUC::AnalyseMessage (uint8_t*          i_pRingBuffer,
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.RemoteDeviceId))
         return ::EResult::FAIL_Buffer_GetValue;
       if (io_Data.RemoteDeviceId == 0)
-        result = (::EResult)EResult::FAIL_Message_RemoteDeviceIdInvalid;
+        result = (::EResult)EResult::FAIL_STUC_Message_RemoteDeviceIdInvalid;
       
       uint32_t ownDeviceId;
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, ownDeviceId))
         return ::EResult::FAIL_Buffer_GetValue;
       if (ownDeviceId != m_DeviceId)
-        result = (::EResult)EResult::FAIL_Message_OwnDeviceIdWrong;
+        result = (::EResult)EResult::FAIL_STUC_Message_OwnDeviceIdWrong;
     }
 
     // Flag: MessageIdUsed
@@ -149,7 +150,7 @@ EResult STUC::AnalyseMessage (uint8_t*          i_pRingBuffer,
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.MessageId))
         return ::EResult::FAIL_Buffer_GetValue;
       if (io_Data.MessageId == 0)
-        result = (::EResult)EResult::FAIL_Message_MessageIdInvalid;
+        result = (::EResult)EResult::FAIL_STUC_Message_MessageIdInvalid;
     }
 
     // Flag: TimestampUsed
@@ -158,21 +159,21 @@ EResult STUC::AnalyseMessage (uint8_t*          i_pRingBuffer,
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.Timestamp))
         return ::EResult::FAIL_Buffer_GetValue;
       if (io_Data.Timestamp == 0)
-        result = (::EResult)EResult::FAIL_Message_TimestampInvalid;
+        result = (::EResult)EResult::FAIL_STUC_Message_TimestampInvalid;
     }
 
     // Command ID
     if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.CommandId))
       return ::EResult::FAIL_Buffer_GetValue;
     if (io_Data.CommandId == 0)
-      result = (::EResult)EResult::FAIL_Message_CommandIdInvalid;
+      result = (::EResult)EResult::FAIL_STUC_Message_CommandIdInvalid;
 
     // Result
     if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, valueUI8))
       return ::EResult::FAIL_Buffer_GetValue;
-    io_Data.MessageResult = (EStucMessageResult)valueUI8;
-    if ((io_Data.MessageResult == EStucMessageResult::None) == (o_MessageType == EStucMessageType::Reply))  // failure if (reply and no result) or (request and result)
-      result = (::EResult)EResult::FAIL_Message_ResultWrong;
+    io_Data.MessageResult = (EMessageResult)valueUI8;
+    if ((io_Data.MessageResult == EMessageResult::None) == (o_MessageType == EMessageType::Reply))  // failure if (reply and no result) or (request and result)
+      result = (::EResult)EResult::FAIL_STUC_Message_ResultWrong;
 
     // Payload data length
     if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.PayloadLength))
@@ -192,14 +193,14 @@ EResult STUC::AnalyseMessage (uint8_t*          i_pRingBuffer,
 
     //========== Trailer ==========
     // Checksum:  header without STX, payload data
-    EStucChecksumType checksumType = (EStucChecksumType)((flags >> c_FlagIndex_ChecksumType) & 0x03);
+    EChecksumType checksumType = (EChecksumType)((flags >> c_FlagIndex_ChecksumType) & 0x03);
     uint32_t checksumCalculated = 0;
     uint32_t checksumFromMessage = 0;
     switch (checksumType)
     {
-    case EStucChecksumType::None:
+    case EChecksumType::None:
       break;
-    case EStucChecksumType::CRC8:
+    case EChecksumType::CRC8:
       if (pAnalyse > pSearch)
         checksumCalculated = m_Crc8.maxim (pSearch + 1, pAnalyse - pSearch - 1);
       else
@@ -212,7 +213,7 @@ EResult STUC::AnalyseMessage (uint8_t*          i_pRingBuffer,
       checksumFromMessage = valueUI8;
       break;
 
-    case EStucChecksumType::CRC16:
+    case EChecksumType::CRC16:
       if (pAnalyse > pSearch)
         checksumCalculated = m_Crc16.modbus (pSearch + 1, pAnalyse - pSearch - 1);
       else
@@ -225,7 +226,7 @@ EResult STUC::AnalyseMessage (uint8_t*          i_pRingBuffer,
       checksumFromMessage = valueUI16;
       break;
 
-    case EStucChecksumType::CRC32:
+    case EChecksumType::CRC32:
       if (pAnalyse > pSearch)
         checksumCalculated = m_Crc32.crc32 (pSearch + 1, pAnalyse - pSearch - 1);
       else
@@ -268,11 +269,11 @@ EResult STUC::AnalyseMessage (uint8_t*          i_pRingBuffer,
 
     io_Data.Clear ();
     io_Data.PayloadLength = 0;
-    o_MessageType   = EStucMessageType::None;
+    o_MessageType   = EMessageType::None;
     o_MessageLength = 0;
   }
 
-  return (::EResult)EResult::FAIL_Message_NotFound;
+  return (::EResult)EResult::FAIL_STUC_Message_NotFound;
 }
 
 //--------------------------------------------------------------------
@@ -360,11 +361,11 @@ void STUC::UpdateTimestamp ()
 
   // Flags
   uint8_t flags = (byte)m_ChecksumType << 5;
-  if (i_MessageIsReply                   ) flags |= 1 << c_FlagIndex_MessageType;
-  if (i_Data.Action == EStucAction::Write) flags |= 1 << c_FlagIndex_Action;
-  if (m_DeviceIdsUsed                    ) flags |= 1 << c_FlagIndex_DeviceIdsUsed;
-  if (m_MessageIdUsed                    ) flags |= 1 << c_FlagIndex_MessageIdUsed;
-  if (m_TimestampUsed                    ) flags |= 1 << c_FlagIndex_TimestampUsed;
+  if (i_MessageIsReply                     ) flags |= 1 << c_FlagIndex_MessageType;
+  if (i_Data.Action == STUC::EAction::Write) flags |= 1 << c_FlagIndex_Action;
+  if (m_DeviceIdsUsed                      ) flags |= 1 << c_FlagIndex_DeviceIdsUsed;
+  if (m_MessageIdUsed                      ) flags |= 1 << c_FlagIndex_MessageIdUsed;
+  if (m_TimestampUsed                      ) flags |= 1 << c_FlagIndex_TimestampUsed;
   *(pMessageBuffer++) = flags;
 
   // Sender and Receiver Device IDs
@@ -423,19 +424,19 @@ void STUC::UpdateTimestamp ()
   // Checksum
   switch (m_ChecksumType)
   {
-  case EStucChecksumType::None:
+  case STUC::EChecksumType::None:
     break;
-  case EStucChecksumType::CRC8:
+  case STUC::EChecksumType::CRC8:
     *(pMessageBuffer++) = m_Crc8.maxim (i_pMessageBuffer + 1, headerSize + i_Data.PayloadLength - 1); // header without STX, payload data
     break;
-  case EStucChecksumType::CRC16:
+  case STUC::EChecksumType::CRC16:
     {
       uint16_t crc16 = m_Crc16.modbus (i_pMessageBuffer + 1, headerSize + i_Data.PayloadLength - 1); // header without STX, payload data
       memcpy (pMessageBuffer, &crc16, sizeof (crc16));
       pMessageBuffer += sizeof (crc16);
     }
     break;
-  case EStucChecksumType::CRC32:
+  case STUC::EChecksumType::CRC32:
     {
       uint32_t crc32 = m_Crc32.crc32 (i_pMessageBuffer + 1, headerSize + i_Data.PayloadLength - 1); // header without STX, payload data
       memcpy (pMessageBuffer, &crc32, sizeof (crc32));
@@ -454,13 +455,13 @@ void STUC::UpdateTimestamp ()
 
 
 //--------------------------------------------------------------------
-::EResult STUC::CheckConfig (uint32_t          i_DeviceId,
-                             EStucChecksumType i_ChecksumType)
+::EResult STUC::CheckConfig (uint32_t            i_DeviceId,
+                             STUC::EChecksumType i_ChecksumType)
 {
   if (i_DeviceId == 0)
-    return ::EResult::FAIL_Device_InvalidId;
+    return ::EResult::FAIL_Device_IdInvalid;
   if (!IsChecksumValid (i_ChecksumType))
-    return ::EResult::FAIL_Device_InvalidConfig;
+    return ::EResult::FAIL_Device_ConfigInvalid;
 
   return ::EResult::SUCCESS;
 }
@@ -478,11 +479,11 @@ void STUC::PrintConfig ()
 //--------------------------------------------------------------------
 ::EResult STUC::ReadConfigFromEEPROM (uint16_t i_Offset)
 {
-  bool              deviceIdsUsed;
-  bool              messageIdUsed;
-  bool              timestampUsed;
-  uint32_t          deviceId;
-  EStucChecksumType checksumType;
+  bool                deviceIdsUsed;
+  bool                messageIdUsed;
+  bool                timestampUsed;
+  uint32_t            deviceId;
+  STUC::EChecksumType checksumType;
 
   if (c_EepromConfigSize + i_Offset > EEPROM.length ())
     return ::EResult::FAIL_EEPROM_IndexOutsideRange;
