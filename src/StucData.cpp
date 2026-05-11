@@ -6,24 +6,24 @@ StucData::StucData ()
 }
 
 //--------------------------------------------------------------------
-StucData::StucData (STUC::EAction i_Action,
-                    uint32_t      i_RemoteDeviceId,
-                    uint16_t      i_CommandId)
+StucData::StucData (bool      i_ActionIsWrite,
+                    uint32_t  i_RemoteDeviceId,
+                    uint16_t  i_CommandId)
 {
-  Action         = i_Action;
+  ActionIsWrite  = i_ActionIsWrite;
   CommandId      = i_CommandId;
   RemoteDeviceId = i_RemoteDeviceId;
 }
 
 //--------------------------------------------------------------------
-StucData::StucData (STUC::EAction         i_Action,
+StucData::StucData (bool                  i_ActionIsWrite,
                     uint32_t              i_RemoteDeviceId,
                     uint32_t              i_MessageId,
                     uint32_t              i_Timestamp,
                     uint16_t              i_CommandId,
                     STUC::EMessageResult  i_MessageResult)
 {
-  Action         = i_Action;
+  ActionIsWrite  = i_ActionIsWrite;
   CommandId      = i_CommandId;
   MessageId      = i_MessageId;
   MessageResult  = i_MessageResult;
@@ -34,7 +34,7 @@ StucData::StucData (STUC::EAction         i_Action,
 //--------------------------------------------------------------------
 void StucData::Clear ()
 {
-  Action         = STUC::EAction::None;
+  ActionIsWrite  = false;
   CommandId      = 0;
   MessageId      = 0;
   MessageResult  = STUC::EMessageResult::None;

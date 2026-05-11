@@ -16,10 +16,10 @@ const char* const STUC::c_EnumNames_ClassFailures[] PROGMEM =
 #undef X
 
 //--------------------------------------------------------------------
-STUC::STUC (uint16_t    i_EepromOffset,
+STUC::STUC (uint16_t    i_EepromAddress,
             ::EResult&  o_Result)
 {
-  o_Result = ReadConfigFromEEPROM (i_EepromOffset);
+  o_Result = ReadConfigFromEEPROM (i_EepromAddress);
 }
 
 //--------------------------------------------------------------------
@@ -61,6 +61,21 @@ bool STUC::IsChecksumValid (EChecksumType i_ChecksumType)
 }
 
 //--------------------------------------------------------------------
+STUC::EMessageResult STUC::GetMessageResultForAnalysisResult (::EResult i_Result)
+{
+  switch ((EResult)i_Result)
+  {
+  case EResult::FAIL_STUC_Message_NotFound:               return EMessageResult::None;
+  case EResult::FAIL_STUC_Message_RemoteDeviceIdInvalid:  return EMessageResult::FAIL_DeviceIdInvalid;
+  case EResult::FAIL_STUC_Message_OwnDeviceIdWrong:       return EMessageResult::FAIL_DeviceIdWrong;
+  case EResult::FAIL_STUC_Message_MessageIdInvalid:       return EMessageResult::FAIL_MessageIdInvalid;
+  case EResult::FAIL_STUC_Message_TimestampInvalid:       return EMessageResult::FAIL_TimestampInvalid;
+  case EResult::FAIL_STUC_Message_CommandIdInvalid:       return EMessageResult::FAIL_CommandIdInvalid;
+  case EResult::FAIL_STUC_Message_ResultWrong:            return EMessageResult::FAIL_ResultWrong;
+  default:                                                return EMessageResult::FAIL_InternalFailure;
+  }
+}
+//--------------------------------------------------------------------
 const __FlashStringHelper* STUC::GetResultText (::EResult i_Result)
 {
   if ((uint16_t)i_Result < (uint16_t)EResult::Dummy_FirstClassFailure)
@@ -69,12 +84,12 @@ const __FlashStringHelper* STUC::GetResultText (::EResult i_Result)
 }
 
 //--------------------------------------------------------------------
-EResult STUC::AnalyseMessage (uint8_t*      i_pRingBuffer,
-                              uint16_t      i_RingBufferLength,
-                              uint16_t&     io_RingBufferStartIndex,
-                              StucData&     io_Data,
-                              EMessageType& o_MessageType,
-                              uint8_t&      o_MessageLength)
+EResult STUC::AnalyseMessage (uint8_t*  i_pRingBuffer,
+                              uint16_t  i_RingBufferLength,
+                              uint16_t& io_RingBufferStartIndex,
+                              StucData& io_Data,
+                              bool&     o_MessageTypeIsReply,
+                              uint8_t&  o_MessageLength)
 {
   if (i_pRingBuffer == 0)
     return ::EResult::FAIL_Pointer_IsZero;
@@ -85,8 +100,8 @@ EResult STUC::AnalyseMessage (uint8_t*      i_pRingBuffer,
 
   io_Data.Clear ();
   io_Data.PayloadLength = 0;
-  o_MessageType   = EMessageType::None;
-  o_MessageLength = 0;
+  o_MessageTypeIsReply = false;
+  o_MessageLength      = 0;
 
   // Execute multiple attempts to search the start of the message:
   // - In each attempt, the message start ID is searched by looping over the buffer.
@@ -124,10 +139,10 @@ EResult STUC::AnalyseMessage (uint8_t*      i_pRingBuffer,
       return ::EResult::FAIL_Buffer_GetValue;
 
     // Flag: MessageType
-    o_MessageType = (flags >> c_FlagIndex_MessageType) & 0x01 ? EMessageType::Reply : EMessageType::Request;
+    o_MessageTypeIsReply = (flags >> c_FlagIndex_MessageType) & 0x01;
 
     // Flag: Action
-    io_Data.Action = (flags >> c_FlagIndex_Action) & 0x01 ? STUC::EAction::Write : STUC::EAction::Read;
+    io_Data.ActionIsWrite = (flags >> c_FlagIndex_Action) & 0x01;
 
     // Flag: DeviceIdsUsed
     if (flags & 1 << c_FlagIndex_DeviceIdsUsed)
@@ -172,7 +187,7 @@ EResult STUC::AnalyseMessage (uint8_t*      i_pRingBuffer,
     if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, valueUI8))
       return ::EResult::FAIL_Buffer_GetValue;
     io_Data.MessageResult = (EMessageResult)valueUI8;
-    if ((io_Data.MessageResult == EMessageResult::None) == (o_MessageType == EMessageType::Reply))  // failure if (reply and no result) or (request and result)
+    if ((io_Data.MessageResult == EMessageResult::None) == o_MessageTypeIsReply)  // failure if (reply and no result) or (request and result)
       result = (::EResult)EResult::FAIL_STUC_Message_ResultWrong;
 
     // Payload data length
@@ -269,8 +284,8 @@ EResult STUC::AnalyseMessage (uint8_t*      i_pRingBuffer,
 
     io_Data.Clear ();
     io_Data.PayloadLength = 0;
-    o_MessageType   = EMessageType::None;
-    o_MessageLength = 0;
+    o_MessageTypeIsReply  = false;
+    o_MessageLength       = 0;
   }
 
   return (::EResult)EResult::FAIL_STUC_Message_NotFound;
@@ -361,11 +376,11 @@ void STUC::UpdateTimestamp ()
 
   // Flags
   uint8_t flags = (byte)m_ChecksumType << 5;
-  if (i_MessageIsReply                     ) flags |= 1 << c_FlagIndex_MessageType;
-  if (i_Data.Action == STUC::EAction::Write) flags |= 1 << c_FlagIndex_Action;
-  if (m_DeviceIdsUsed                      ) flags |= 1 << c_FlagIndex_DeviceIdsUsed;
-  if (m_MessageIdUsed                      ) flags |= 1 << c_FlagIndex_MessageIdUsed;
-  if (m_TimestampUsed                      ) flags |= 1 << c_FlagIndex_TimestampUsed;
+  if (i_MessageIsReply    ) flags |= 1 << c_FlagIndex_MessageType;
+  if (i_Data.ActionIsWrite) flags |= 1 << c_FlagIndex_Action;
+  if (m_DeviceIdsUsed     ) flags |= 1 << c_FlagIndex_DeviceIdsUsed;
+  if (m_MessageIdUsed     ) flags |= 1 << c_FlagIndex_MessageIdUsed;
+  if (m_TimestampUsed     ) flags |= 1 << c_FlagIndex_TimestampUsed;
   *(pMessageBuffer++) = flags;
 
   // Sender and Receiver Device IDs
@@ -477,23 +492,34 @@ void STUC::PrintConfig ()
 }
 
 //--------------------------------------------------------------------
-::EResult STUC::ReadConfigFromEEPROM (uint16_t i_Offset)
+::EResult STUC::ReadConfigFromEEPROM (uint16_t i_Address)
 {
   bool                deviceIdsUsed;
   bool                messageIdUsed;
   bool                timestampUsed;
   uint32_t            deviceId;
   STUC::EChecksumType checksumType;
+  uint8_t configChecksumCRC8;
 
-  if (c_EepromConfigSize + i_Offset > EEPROM.length ())
+  if (c_EepromConfigTotalSize + i_Address > EEPROM.length ())
     return ::EResult::FAIL_EEPROM_IndexOutsideRange;
 
-  EEPROM.get (i_Offset + 0, deviceIdsUsed);
-  EEPROM.get (i_Offset + 1, messageIdUsed);
-  EEPROM.get (i_Offset + 2, timestampUsed);
-  EEPROM.get (i_Offset + 3, deviceId);
-  EEPROM.get (i_Offset + 7, checksumType);
+  EEPROM.get (i_Address + 0, deviceIdsUsed);
+  EEPROM.get (i_Address + 1, messageIdUsed);
+  EEPROM.get (i_Address + 2, timestampUsed);
+  EEPROM.get (i_Address + 3, deviceId);
+  EEPROM.get (i_Address + 7, checksumType);
+  EEPROM.get (i_Address + 8, configChecksumCRC8);
 
+  uint8_t byteValue = 0;
+  uint8_t checksum = m_Crc8.maxim (&byteValue, 1);
+  for (int index = 0; index < c_EepromConfigDataSize; index++)
+  {
+    byteValue = EEPROM.read (i_Address + index);
+    checksum = m_Crc8.maxim_upd (&byteValue, 1);
+  }
+  if (checksum != configChecksumCRC8)
+    return ::EResult::FAIL_Device_ConfigChecksumWrong;
   ::EResult result = CheckConfig (deviceId, checksumType);
   if (result != ::EResult::SUCCESS)
     return result;
@@ -508,18 +534,25 @@ void STUC::PrintConfig ()
 }
 
 //--------------------------------------------------------------------
-::EResult STUC::WriteConfigToEEPROM (uint16_t i_Offset)
+::EResult STUC::WriteConfigToEEPROM (uint16_t i_Address)
 {
-  if (c_EepromConfigSize + i_Offset > EEPROM.length ())
+  if (c_EepromConfigTotalSize + i_Address > EEPROM.length ())
     return ::EResult::FAIL_EEPROM_IndexOutsideRange;
 
-  EEPROM.put (i_Offset + 0, m_DeviceIdsUsed);
-  EEPROM.put (i_Offset + 1, m_MessageIdUsed);
-  EEPROM.put (i_Offset + 2, m_TimestampUsed);
-  EEPROM.put (i_Offset + 3, m_DeviceId);
-  EEPROM.put (i_Offset + 7, m_ChecksumType);
+  EEPROM.put (i_Address + 0, m_DeviceIdsUsed);
+  EEPROM.put (i_Address + 1, m_MessageIdUsed);
+  EEPROM.put (i_Address + 2, m_TimestampUsed);
+  EEPROM.put (i_Address + 3, m_DeviceId);
+  EEPROM.put (i_Address + 7, m_ChecksumType);
+
+  uint8_t byteValue = 0;
+  uint8_t checksum = m_Crc8.maxim (&byteValue, 1);
+  for (int index = 0; index < c_EepromConfigDataSize; index++)
+  {
+    byteValue = EEPROM.read (i_Address + index);
+    checksum = m_Crc8.maxim_upd (&byteValue, 1);
+  }
+  EEPROM.put (i_Address + 8, checksum);
 
   return ::EResult::SUCCESS;
 }
-
-

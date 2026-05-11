@@ -50,13 +50,6 @@ public:
   };
   #undef X
 
-  enum class EAction : uint8_t
-  {
-    None  = 0,
-    Read  = 1,
-    Write = 2
-  };
-
   enum class EChecksumType : uint8_t
   {
     None  = 0,
@@ -70,18 +63,27 @@ public:
     None       = 0,
     Success    = 1,
     InProgress = 2,
-  };
-
-  enum class EMessageType : uint8_t
-  {
-    None    = 0,
-    Request = 1,
-    Reply   = 2
+    FAIL_DummyFirst = 0x10,
+    FAIL_InternalFailure,
+    FAIL_DeviceIdInvalid,
+    FAIL_DeviceIdWrong,
+    FAIL_MessageIdInvalid,
+    FAIL_TimestampInvalid,
+    FAIL_TimestampTooOld,
+    FAIL_TimestampInTheFuture,
+    FAIL_CommandIdInvalid,
+    FAIL_CommandNotSupported,
+    FAIL_CommandExecutionAborted,
+    FAIL_CommandExecutionFailed,
+    FAIL_CommandExecutionNotAllowed,
+    FAIL_PayloadProcessing,
+    FAIL_ResultWrong,
   };
 
 //==================== Fields ====================
 private:
-  static const uint8_t c_EepromConfigSize = 8;
+  static const uint8_t c_EepromConfigDataSize  = 8;
+  static const uint8_t c_EepromConfigTotalSize = 9;
   static const uint8_t c_MessageStartID = 0x02;  // STX
   static const uint8_t c_MessageEndID   = 0x03;  // ETX
   static const uint8_t c_Version = 0x01;
@@ -122,7 +124,7 @@ private:
 
 //==================== Constructors ====================
 public:
-  STUC (uint16_t    i_EepromOffset,
+  STUC (uint16_t    i_EepromAddress,
         ::EResult&  o_Result);
 
   STUC (bool          i_DeviceIdsUsed,
@@ -136,15 +138,16 @@ public:
 public:
   static uint8_t GetChecksumLength (EChecksumType i_ChecksumType);
   static bool IsChecksumValid (EChecksumType i_ChecksumType);
-
+  
+  static EMessageResult GetMessageResultForAnalysisResult (::EResult i_Result);
   static const __FlashStringHelper* GetResultText (::EResult i_Result);
 
-  ::EResult AnalyseMessage (uint8_t*      i_pRingBuffer,
-                            uint16_t      i_RingBufferLength,
-                            uint16_t&     io_RingBufferStartIndex,
-                            StucData&     io_Data,
-                            EMessageType& o_MessageType,
-                            uint8_t&      o_MessageLength);
+  ::EResult AnalyseMessage (uint8_t*  i_pRingBuffer,
+                            uint16_t  i_RingBufferLength,
+                            uint16_t& io_RingBufferStartIndex,
+                            StucData& io_Data,
+                            bool&     o_MessageTypeIsReply,
+                            uint8_t&  o_MessageLength);
 
   ::EResult ComposeRequest (StucData& i_Data,
                             uint8_t*  i_pMessageBuffer,
@@ -176,10 +179,10 @@ public:
   void PrintConfig ();
 
 private:
-  ::EResult ReadConfigFromEEPROM (uint16_t i_Offset);
+  ::EResult ReadConfigFromEEPROM (uint16_t i_Address);
 
 public:
-  ::EResult WriteConfigToEEPROM (uint16_t i_Offset);
+  ::EResult WriteConfigToEEPROM (uint16_t i_Address);
 };
 
 #endif

@@ -8,7 +8,7 @@
 struct StucData
 {
 //==================== Fields ====================
-  STUC::EAction         Action              = STUC::EAction::None;
+  bool                  ActionIsWrite       = false;
   uint16_t              CommandId           = 0;
   uint32_t              MessageId           = 0;
   STUC::EMessageResult  MessageResult       = STUC::EMessageResult::None;
@@ -21,11 +21,11 @@ struct StucData
 //==================== Constructors ====================
   StucData ();
 
-  StucData (STUC::EAction i_Action,
-            uint32_t      i_RemoteDeviceId,
-            uint16_t      i_CommandId);
+  StucData (bool      i_ActionIsWrite,
+            uint32_t  i_RemoteDeviceId,
+            uint16_t  i_CommandId);
 
-  StucData (STUC::EAction         i_Action,
+  StucData (bool                  i_ActionIsWrite,
             uint32_t              i_RemoteDeviceId,
             uint32_t              i_MessageId,
             uint32_t              i_Timestamp,
