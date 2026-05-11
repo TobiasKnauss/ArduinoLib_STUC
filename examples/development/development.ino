@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <Streaming.h>
-#include <STUC.h>
+#include <UCOP.h>
 
-STUC* m_pSTUC;
+UCOP* m_pUCOP;
 
 uint8_t m_PayloadSendBuffer[20];
 uint8_t m_SendBuffer       [80];
@@ -34,14 +34,14 @@ void setup ()
   Serial << "RecvBuffer Addr=" << _HEX4((uint16_t)m_ReceiveBuffer) << " Len=" << sizeof (m_ReceiveBuffer) << endl;
   Memory_PrintLn (m_ReceiveBuffer, sizeof (m_ReceiveBuffer));
 
-  m_pSTUC = new STUC (true, true, false, 101, EStucChecksumType::CRC16, result);
-  Serial << "STUC ctor Result: " << (int)result << " = " << STUC::GetResultText (result) << endl;
+  m_pUCOP = new UCOP (true, true, false, 101, EUcopChecksumType::CRC16, result);
+  Serial << "UCOP ctor Result: " << (int)result << " = " << UCOP::GetResultText (result) << endl;
 
   uint16_t messageLength = 0;
-  StucData stucData = StucData (EStucAction::Read, 258, 42);
+  UcopData stucData = UcopData (EUcopAction::Read, 258, 42);
   stucData.SetPayloadInfo (m_PayloadSendBuffer, sizeof (m_PayloadSendBuffer), payloadLength);
-  result = m_pSTUC->ComposeRequest (stucData, m_SendBuffer, sizeof (m_SendBuffer), messageLength);
-  Serial << "ComposeRequest() Result: " << (int)result << " = " << STUC::GetResultText (result) << ", MsgLen=" << messageLength << endl;
+  result = m_pUCOP->ComposeRequest (stucData, m_SendBuffer, sizeof (m_SendBuffer), messageLength);
+  Serial << "ComposeRequest() Result: " << (int)result << " = " << UCOP::GetResultText (result) << ", MsgLen=" << messageLength << endl;
   Memory_PrintLn (m_SendBuffer, sizeof (m_SendBuffer));
 
   Serial.println ("create data for receiver...");
@@ -64,21 +64,21 @@ void setup ()
   memcpy (m_ReceiveBuffer, m_ReceiveBuffer + 35, messageLength - msgWrap);
   Memory_PrintLn (m_ReceiveBuffer, sizeof (m_ReceiveBuffer));
 
-  StucData          recvData;
+  UcopData          recvData;
   recvData.SetPayloadInfo (m_PayloadRecvBuffer, sizeof (m_PayloadRecvBuffer));
-  EStucMessageType  recvMessageType   = EStucMessageType::None;
+  EUcopMessageType  recvMessageType   = EUcopMessageType::None;
   uint8_t           recvMessageLength = 0;
 
   uint16_t bufferStartIndex = 0;
   do
   {
-    result = m_pSTUC->AnalyseMessage (m_ReceiveBuffer,
+    result = m_pUCOP->AnalyseMessage (m_ReceiveBuffer,
                                       sizeof (m_ReceiveBuffer),
                                       bufferStartIndex,
                                       recvData,
                                       recvMessageType,
                                       recvMessageLength);
-    Serial << "AnalyseMessage() Result: " << (int)result << " = " << STUC::GetResultText (result) << endl;
+    Serial << "AnalyseMessage() Result: " << (int)result << " = " << UCOP::GetResultText (result) << endl;
     Serial << F("Message Type:        ") << (uint8_t)recvMessageType        << endl;
     Serial << F("Action:              ") << (uint8_t)recvData.Action        << endl;
     Serial << F("Remote Device Id:    ") << recvData.RemoteDeviceId         << endl;

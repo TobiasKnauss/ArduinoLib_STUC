@@ -1,5 +1,5 @@
-#ifndef STUC_h
-#define STUC_h
+#ifndef UCOP_h
+#define UCOP_h
 
 #include <Arduino.h>
 #include <FastCRC.h>
@@ -8,12 +8,12 @@
 #include <MemoryTools.h>
 #include <Result.h>
 
-class StucData;
+class UcopData;
 
-// STUC: Sir Toby's Universal Communication Protocol
+// UCOP: Universal Communication Protocol
 //
-// The STUC protocol defines the structure and content of data packets that are exchanged between microcontrollers and/or computers.
-class STUC
+// The UCOP protocol defines the structure and content of data packets that are exchanged between microcontrollers and/or computers.
+class UCOP
 {
 //--------------------------------------------------------------------
 //          Offset        Length    Data
@@ -45,7 +45,7 @@ public:
   enum class EResult : uint16_t
   {
     Dummy_FirstClassFailure = (uint16_t)::EResult::Dummy_FirstClassFailure,
-    #include "STUC_failures.h"
+    #include "UCOP_failures.h"
     Dummy_LastClassFailure
   };
   #undef X
@@ -104,7 +104,7 @@ private:
   static const char* const c_EnumNames_ClassFailures[] PROGMEM;
 
   #define X(name) static const char _EResult_##name[] PROGMEM;
-  #include "STUC_failures.h"
+  #include "UCOP_failures.h"
   #undef X
 
   EChecksumType m_ChecksumType  = EChecksumType::None;
@@ -124,10 +124,10 @@ private:
 
 //==================== Constructors ====================
 public:
-  STUC (uint16_t    i_EepromAddress,
+  UCOP (uint16_t    i_EepromAddress,
         ::EResult&  o_Result);
 
-  STUC (bool          i_DeviceIdsUsed,
+  UCOP (bool          i_DeviceIdsUsed,
         bool          i_MessageIdUsed,
         bool          i_TimestampUsed,
         uint32_t      i_DeviceId,
@@ -145,16 +145,16 @@ public:
   ::EResult AnalyseMessage (uint8_t*  i_pRingBuffer,
                             uint16_t  i_RingBufferLength,
                             uint16_t& io_RingBufferStartIndex,
-                            StucData& io_Data,
+                            UcopData& io_Data,
                             bool&     o_MessageTypeIsReply,
                             uint8_t&  o_MessageLength);
 
-  ::EResult ComposeRequest (StucData& i_Data,
+  ::EResult ComposeRequest (UcopData& i_Data,
                             uint8_t*  i_pMessageBuffer,
                             uint8_t   i_MessageBufferLength,
                             uint16_t& o_MessageLength);
 
-  ::EResult ComposeReply (StucData& i_Data,
+  ::EResult ComposeReply (UcopData& i_Data,
                           uint8_t*  i_pMessageBuffer,
                           uint8_t   i_MessageBufferLength,
                           uint16_t& o_MessageLength);
@@ -165,7 +165,7 @@ public:
   void UpdateTimestamp ();
 
 private:
-  ::EResult ComposeMessage (StucData& i_Data,
+  ::EResult ComposeMessage (UcopData& i_Data,
                             uint8_t*  i_pMessageBuffer,
                             uint8_t   i_MessageBufferLength,
                             uint16_t& o_MessageLength,

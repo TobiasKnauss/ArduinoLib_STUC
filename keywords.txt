@@ -1,17 +1,17 @@
 #######################################
-# Syntax Coloring Map For STUC
+# Syntax Coloring Map For UCOP
 #######################################
 
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
 
-STUC			KEYWORD1
-StucData		KEYWORD1
-EStucAction		KEYWORD1
-EStucChecksumType	KEYWORD1
-EStucMessageResult	
-EStucMessageType	KEYWORD1
+UCOP			KEYWORD1
+UcopData		KEYWORD1
+EUcopAction		KEYWORD1
+EUcopChecksumType	KEYWORD1
+EUcopMessageResult	
+EUcopMessageType	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)

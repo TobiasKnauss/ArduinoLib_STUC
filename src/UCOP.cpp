@@ -1,29 +1,29 @@
 #include <EEPROM.h>
-#include "STUC.h"
-#include "StucData.h"
+#include "UCOP.h"
+#include "UcopData.h"
 
 //--------------------------------------------------------------------
-#define X(name) const char STUC::_EResult_##name[] PROGMEM = #name;
-#include "STUC_failures.h"
+#define X(name) const char UCOP::_EResult_##name[] PROGMEM = #name;
+#include "UCOP_failures.h"
 #undef X
 
 //--------------------------------------------------------------------
 #define X(name) _EResult_##name,
-const char* const STUC::c_EnumNames_ClassFailures[] PROGMEM =
+const char* const UCOP::c_EnumNames_ClassFailures[] PROGMEM =
 {
-  #include "STUC_failures.h"
+  #include "UCOP_failures.h"
 };
 #undef X
 
 //--------------------------------------------------------------------
-STUC::STUC (uint16_t    i_EepromAddress,
+UCOP::UCOP (uint16_t    i_EepromAddress,
             ::EResult&  o_Result)
 {
   o_Result = ReadConfigFromEEPROM (i_EepromAddress);
 }
 
 //--------------------------------------------------------------------
-STUC::STUC (bool          i_DeviceIdsUsed,
+UCOP::UCOP (bool          i_DeviceIdsUsed,
             bool          i_MessageIdUsed,
             bool          i_TimestampUsed,
             uint32_t      i_DeviceId,
@@ -42,7 +42,7 @@ STUC::STUC (bool          i_DeviceIdsUsed,
 }
 
 //--------------------------------------------------------------------
-uint8_t STUC::GetChecksumLength (EChecksumType i_ChecksumType)
+uint8_t UCOP::GetChecksumLength (EChecksumType i_ChecksumType)
 {
   switch (i_ChecksumType)
   {
@@ -54,29 +54,29 @@ uint8_t STUC::GetChecksumLength (EChecksumType i_ChecksumType)
 }
 
 //--------------------------------------------------------------------
-bool STUC::IsChecksumValid (EChecksumType i_ChecksumType)
+bool UCOP::IsChecksumValid (EChecksumType i_ChecksumType)
 {
   return i_ChecksumType == EChecksumType::None
       || GetChecksumLength (i_ChecksumType) > 0;
 }
 
 //--------------------------------------------------------------------
-STUC::EMessageResult STUC::GetMessageResultForAnalysisResult (::EResult i_Result)
+UCOP::EMessageResult UCOP::GetMessageResultForAnalysisResult (::EResult i_Result)
 {
   switch ((EResult)i_Result)
   {
-  case EResult::FAIL_STUC_Message_NotFound:               return EMessageResult::None;
-  case EResult::FAIL_STUC_Message_RemoteDeviceIdInvalid:  return EMessageResult::FAIL_DeviceIdInvalid;
-  case EResult::FAIL_STUC_Message_OwnDeviceIdWrong:       return EMessageResult::FAIL_DeviceIdWrong;
-  case EResult::FAIL_STUC_Message_MessageIdInvalid:       return EMessageResult::FAIL_MessageIdInvalid;
-  case EResult::FAIL_STUC_Message_TimestampInvalid:       return EMessageResult::FAIL_TimestampInvalid;
-  case EResult::FAIL_STUC_Message_CommandIdInvalid:       return EMessageResult::FAIL_CommandIdInvalid;
-  case EResult::FAIL_STUC_Message_ResultWrong:            return EMessageResult::FAIL_ResultWrong;
+  case EResult::FAIL_UCOP_Message_NotFound:               return EMessageResult::None;
+  case EResult::FAIL_UCOP_Message_RemoteDeviceIdInvalid:  return EMessageResult::FAIL_DeviceIdInvalid;
+  case EResult::FAIL_UCOP_Message_OwnDeviceIdWrong:       return EMessageResult::FAIL_DeviceIdWrong;
+  case EResult::FAIL_UCOP_Message_MessageIdInvalid:       return EMessageResult::FAIL_MessageIdInvalid;
+  case EResult::FAIL_UCOP_Message_TimestampInvalid:       return EMessageResult::FAIL_TimestampInvalid;
+  case EResult::FAIL_UCOP_Message_CommandIdInvalid:       return EMessageResult::FAIL_CommandIdInvalid;
+  case EResult::FAIL_UCOP_Message_ResultWrong:            return EMessageResult::FAIL_ResultWrong;
   default:                                                return EMessageResult::FAIL_InternalFailure;
   }
 }
 //--------------------------------------------------------------------
-const __FlashStringHelper* STUC::GetResultText (::EResult i_Result)
+const __FlashStringHelper* UCOP::GetResultText (::EResult i_Result)
 {
   if ((uint16_t)i_Result < (uint16_t)EResult::Dummy_FirstClassFailure)
     return Result::GetText (i_Result);
@@ -84,10 +84,10 @@ const __FlashStringHelper* STUC::GetResultText (::EResult i_Result)
 }
 
 //--------------------------------------------------------------------
-EResult STUC::AnalyseMessage (uint8_t*  i_pRingBuffer,
+EResult UCOP::AnalyseMessage (uint8_t*  i_pRingBuffer,
                               uint16_t  i_RingBufferLength,
                               uint16_t& io_RingBufferStartIndex,
-                              StucData& io_Data,
+                              UcopData& io_Data,
                               bool&     o_MessageTypeIsReply,
                               uint8_t&  o_MessageLength)
 {
@@ -150,13 +150,13 @@ EResult STUC::AnalyseMessage (uint8_t*  i_pRingBuffer,
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.RemoteDeviceId))
         return ::EResult::FAIL_Buffer_GetValue;
       if (io_Data.RemoteDeviceId == 0)
-        result = (::EResult)EResult::FAIL_STUC_Message_RemoteDeviceIdInvalid;
+        result = (::EResult)EResult::FAIL_UCOP_Message_RemoteDeviceIdInvalid;
       
       uint32_t ownDeviceId;
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, ownDeviceId))
         return ::EResult::FAIL_Buffer_GetValue;
       if (ownDeviceId != m_DeviceId)
-        result = (::EResult)EResult::FAIL_STUC_Message_OwnDeviceIdWrong;
+        result = (::EResult)EResult::FAIL_UCOP_Message_OwnDeviceIdWrong;
     }
 
     // Flag: MessageIdUsed
@@ -165,7 +165,7 @@ EResult STUC::AnalyseMessage (uint8_t*  i_pRingBuffer,
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.MessageId))
         return ::EResult::FAIL_Buffer_GetValue;
       if (io_Data.MessageId == 0)
-        result = (::EResult)EResult::FAIL_STUC_Message_MessageIdInvalid;
+        result = (::EResult)EResult::FAIL_UCOP_Message_MessageIdInvalid;
     }
 
     // Flag: TimestampUsed
@@ -174,21 +174,21 @@ EResult STUC::AnalyseMessage (uint8_t*  i_pRingBuffer,
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.Timestamp))
         return ::EResult::FAIL_Buffer_GetValue;
       if (io_Data.Timestamp == 0)
-        result = (::EResult)EResult::FAIL_STUC_Message_TimestampInvalid;
+        result = (::EResult)EResult::FAIL_UCOP_Message_TimestampInvalid;
     }
 
     // Command ID
     if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.CommandId))
       return ::EResult::FAIL_Buffer_GetValue;
     if (io_Data.CommandId == 0)
-      result = (::EResult)EResult::FAIL_STUC_Message_CommandIdInvalid;
+      result = (::EResult)EResult::FAIL_UCOP_Message_CommandIdInvalid;
 
     // Result
     if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, valueUI8))
       return ::EResult::FAIL_Buffer_GetValue;
     io_Data.MessageResult = (EMessageResult)valueUI8;
     if ((io_Data.MessageResult == EMessageResult::None) == o_MessageTypeIsReply)  // failure if (reply and no result) or (request and result)
-      result = (::EResult)EResult::FAIL_STUC_Message_ResultWrong;
+      result = (::EResult)EResult::FAIL_UCOP_Message_ResultWrong;
 
     // Payload data length
     if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.PayloadLength))
@@ -288,11 +288,11 @@ EResult STUC::AnalyseMessage (uint8_t*  i_pRingBuffer,
     o_MessageLength       = 0;
   }
 
-  return (::EResult)EResult::FAIL_STUC_Message_NotFound;
+  return (::EResult)EResult::FAIL_UCOP_Message_NotFound;
 }
 
 //--------------------------------------------------------------------
-EResult STUC::ComposeRequest (StucData& i_Data,
+EResult UCOP::ComposeRequest (UcopData& i_Data,
                               uint8_t*  i_pMessageBuffer,
                               uint8_t   i_MessageBufferLength,
                               uint16_t& o_MessageLength)
@@ -305,7 +305,7 @@ EResult STUC::ComposeRequest (StucData& i_Data,
 }
 
 //--------------------------------------------------------------------
-EResult STUC::ComposeReply (StucData& i_Data,
+EResult UCOP::ComposeReply (UcopData& i_Data,
                             byte*     i_pMessageBuffer,
                             byte      i_MessageBufferLength,
                             uint16_t& o_MessageLength)
@@ -318,7 +318,7 @@ EResult STUC::ComposeReply (StucData& i_Data,
 }
 
 //--------------------------------------------------------------------
-uint8_t STUC::CalcHeaderSize ()
+uint8_t UCOP::CalcHeaderSize ()
 {
   return c_HeaderMinLength
        + (m_DeviceIdsUsed ? 8 : 0)
@@ -327,14 +327,14 @@ uint8_t STUC::CalcHeaderSize ()
 }
 
 //--------------------------------------------------------------------
-uint8_t STUC::CalcTrailerSize ()
+uint8_t UCOP::CalcTrailerSize ()
 {
   return c_TrailerMinLength
        + GetChecksumLength (m_ChecksumType);
 }
 
 //--------------------------------------------------------------------
-void STUC::UpdateTimestamp ()
+void UCOP::UpdateTimestamp ()
 {
   unsigned long secondsSinceMillis0 = millis () / 1000;
   if (secondsSinceMillis0 < m_SecondsSinceMillis0_LastValue) // overflow happened
@@ -344,7 +344,7 @@ void STUC::UpdateTimestamp ()
 }
 
 //--------------------------------------------------------------------
-::EResult STUC::ComposeMessage (StucData& i_Data,
+::EResult UCOP::ComposeMessage (UcopData& i_Data,
                                 uint8_t*  i_pMessageBuffer,
                                 uint8_t   i_MessageBufferLength,
                                 uint16_t& o_MessageLength,
@@ -439,19 +439,19 @@ void STUC::UpdateTimestamp ()
   // Checksum
   switch (m_ChecksumType)
   {
-  case STUC::EChecksumType::None:
+  case UCOP::EChecksumType::None:
     break;
-  case STUC::EChecksumType::CRC8:
+  case UCOP::EChecksumType::CRC8:
     *(pMessageBuffer++) = m_Crc8.maxim (i_pMessageBuffer + 1, headerSize + i_Data.PayloadLength - 1); // header without STX, payload data
     break;
-  case STUC::EChecksumType::CRC16:
+  case UCOP::EChecksumType::CRC16:
     {
       uint16_t crc16 = m_Crc16.modbus (i_pMessageBuffer + 1, headerSize + i_Data.PayloadLength - 1); // header without STX, payload data
       memcpy (pMessageBuffer, &crc16, sizeof (crc16));
       pMessageBuffer += sizeof (crc16);
     }
     break;
-  case STUC::EChecksumType::CRC32:
+  case UCOP::EChecksumType::CRC32:
     {
       uint32_t crc32 = m_Crc32.crc32 (i_pMessageBuffer + 1, headerSize + i_Data.PayloadLength - 1); // header without STX, payload data
       memcpy (pMessageBuffer, &crc32, sizeof (crc32));
@@ -470,8 +470,8 @@ void STUC::UpdateTimestamp ()
 
 
 //--------------------------------------------------------------------
-::EResult STUC::CheckConfig (uint32_t            i_DeviceId,
-                             STUC::EChecksumType i_ChecksumType)
+::EResult UCOP::CheckConfig (uint32_t            i_DeviceId,
+                             UCOP::EChecksumType i_ChecksumType)
 {
   if (i_DeviceId == 0)
     return ::EResult::FAIL_Device_IdInvalid;
@@ -482,7 +482,7 @@ void STUC::UpdateTimestamp ()
 }
 
 //--------------------------------------------------------------------
-void STUC::PrintConfig ()
+void UCOP::PrintConfig ()
 {
   Serial << "DeviceIdsUsed = " << m_DeviceIdsUsed << endl;
   Serial << "MessageIdUsed = " << m_MessageIdUsed << endl;
@@ -492,13 +492,13 @@ void STUC::PrintConfig ()
 }
 
 //--------------------------------------------------------------------
-::EResult STUC::ReadConfigFromEEPROM (uint16_t i_Address)
+::EResult UCOP::ReadConfigFromEEPROM (uint16_t i_Address)
 {
   bool                deviceIdsUsed;
   bool                messageIdUsed;
   bool                timestampUsed;
   uint32_t            deviceId;
-  STUC::EChecksumType checksumType;
+  UCOP::EChecksumType checksumType;
   uint8_t configChecksumCRC8;
 
   if (c_EepromConfigTotalSize + i_Address > EEPROM.length ())
@@ -534,7 +534,7 @@ void STUC::PrintConfig ()
 }
 
 //--------------------------------------------------------------------
-::EResult STUC::WriteConfigToEEPROM (uint16_t i_Address)
+::EResult UCOP::WriteConfigToEEPROM (uint16_t i_Address)
 {
   if (c_EepromConfigTotalSize + i_Address > EEPROM.length ())
     return ::EResult::FAIL_EEPROM_IndexOutsideRange;
