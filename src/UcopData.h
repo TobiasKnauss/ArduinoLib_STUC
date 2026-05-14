@@ -1,11 +1,11 @@
-#ifndef UcopData_h
-#define UcopData_h
+#ifndef UCOPData_h
+#define UCOPData_h
 
 #include <Arduino.h>
 
 #include "UCOP.h"
 
-struct UcopData
+struct UCOPData
 {
 //==================== Fields ====================
   bool                  ActionIsWrite       = false;
@@ -19,13 +19,13 @@ struct UcopData
   uint8_t               PayloadLength       = 0;
 
 //==================== Constructors ====================
-  UcopData ();
+  UCOPData ();
 
-  UcopData (bool      i_ActionIsWrite,
+  UCOPData (bool      i_ActionIsWrite,
             uint32_t  i_RemoteDeviceId,
             uint16_t  i_CommandId);
 
-  UcopData (bool                  i_ActionIsWrite,
+  UCOPData (bool                  i_ActionIsWrite,
             uint32_t              i_RemoteDeviceId,
             uint32_t              i_MessageId,
             uint32_t              i_Timestamp,

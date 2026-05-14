@@ -1,17 +1,35 @@
 #include <EEPROM.h>
 #include "UCOP.h"
-#include "UcopData.h"
+#include "UCOPData.h"
 
 //--------------------------------------------------------------------
 #define X(name) const char UCOP::_EResult_##name[] PROGMEM = #name;
-#include "UCOP_failures.h"
+#include "UCOP_EResult_failures.h"
 #undef X
 
 //--------------------------------------------------------------------
 #define X(name) _EResult_##name,
-const char* const UCOP::c_EnumNames_ClassFailures[] PROGMEM =
+const char* const UCOP::c_EResult_ClassFailures_Names[] PROGMEM =
 {
-  #include "UCOP_failures.h"
+  #include "UCOP_EResult_failures.h"
+};
+#undef X
+
+//--------------------------------------------------------------------
+#define X(name) const char UCOP::_EMessageResult_##name[] PROGMEM = #name;
+#include "UCOP_EMessageResult_results.h"
+#include "UCOP_EMessageResult_failures.h"
+#undef X
+
+//--------------------------------------------------------------------
+#define X(name) _EMessageResult_##name,
+const char* const UCOP::c_EMessageResult_Results_Names[] PROGMEM =
+{
+#include "UCOP_EMessageResult_results.h"
+};
+const char* const UCOP::c_EMessageResult_Failures_Names[] PROGMEM =
+{
+#include "UCOP_EMessageResult_failures.h"
 };
 #undef X
 
@@ -54,13 +72,6 @@ uint8_t UCOP::GetChecksumLength (EChecksumType i_ChecksumType)
 }
 
 //--------------------------------------------------------------------
-bool UCOP::IsChecksumValid (EChecksumType i_ChecksumType)
-{
-  return i_ChecksumType == EChecksumType::None
-      || GetChecksumLength (i_ChecksumType) > 0;
-}
-
-//--------------------------------------------------------------------
 UCOP::EMessageResult UCOP::GetMessageResultForAnalysisResult (::EResult i_Result)
 {
   switch ((EResult)i_Result)
@@ -75,19 +86,36 @@ UCOP::EMessageResult UCOP::GetMessageResultForAnalysisResult (::EResult i_Result
   default:                                                return EMessageResult::FAIL_InternalFailure;
   }
 }
+
+//--------------------------------------------------------------------
+const __FlashStringHelper* UCOP::GetMessageResultText (EMessageResult i_MessageResult)
+{
+  if ((uint16_t)i_MessageResult < (uint16_t)EMessageResult::Dummy_FirstFailure)
+    return (const __FlashStringHelper*)pgm_read_ptr(&c_EMessageResult_Results_Names[(uint16_t)i_MessageResult]);
+
+  return (const __FlashStringHelper*)pgm_read_ptr(&c_EMessageResult_Failures_Names[(uint16_t)i_MessageResult - (uint16_t)EMessageResult::Dummy_FirstFailure - 1]);
+}
+
 //--------------------------------------------------------------------
 const __FlashStringHelper* UCOP::GetResultText (::EResult i_Result)
 {
   if ((uint16_t)i_Result < (uint16_t)EResult::Dummy_FirstClassFailure)
     return Result::GetText (i_Result);
-  return (const __FlashStringHelper*)pgm_read_ptr(&c_EnumNames_ClassFailures[(uint16_t)i_Result - (uint16_t)EResult::Dummy_FirstClassFailure - 1]);
+  return (const __FlashStringHelper*)pgm_read_ptr(&c_EResult_ClassFailures_Names[(uint16_t)i_Result - (uint16_t)EResult::Dummy_FirstClassFailure - 1]);
+}
+
+//--------------------------------------------------------------------
+bool UCOP::IsChecksumValid (EChecksumType i_ChecksumType)
+{
+  return i_ChecksumType == EChecksumType::None
+      || GetChecksumLength (i_ChecksumType) > 0;
 }
 
 //--------------------------------------------------------------------
 EResult UCOP::AnalyseMessage (uint8_t*  i_pRingBuffer,
                               uint16_t  i_RingBufferLength,
                               uint16_t& io_RingBufferStartIndex,
-                              UcopData& io_Data,
+                              UCOPData& io_Data,
                               bool&     o_MessageTypeIsReply,
                               uint8_t&  o_MessageLength)
 {
@@ -292,32 +320,6 @@ EResult UCOP::AnalyseMessage (uint8_t*  i_pRingBuffer,
 }
 
 //--------------------------------------------------------------------
-EResult UCOP::ComposeRequest (UcopData& i_Data,
-                              uint8_t*  i_pMessageBuffer,
-                              uint8_t   i_MessageBufferLength,
-                              uint16_t& o_MessageLength)
-{
-  return ComposeMessage (i_Data,
-                         i_pMessageBuffer,
-                         i_MessageBufferLength,
-                         o_MessageLength,
-                         false);
-}
-
-//--------------------------------------------------------------------
-EResult UCOP::ComposeReply (UcopData& i_Data,
-                            byte*     i_pMessageBuffer,
-                            byte      i_MessageBufferLength,
-                            uint16_t& o_MessageLength)
-{
-  return ComposeMessage (i_Data,
-                         i_pMessageBuffer,
-                         i_MessageBufferLength,
-                         o_MessageLength,
-                         true);
-}
-
-//--------------------------------------------------------------------
 uint8_t UCOP::CalcHeaderSize ()
 {
   return c_HeaderMinLength
@@ -334,6 +336,42 @@ uint8_t UCOP::CalcTrailerSize ()
 }
 
 //--------------------------------------------------------------------
+EResult UCOP::ComposeReply (UCOPData& i_Data,
+                            byte*     i_pMessageBuffer,
+                            byte      i_MessageBufferLength,
+                            uint16_t& o_MessageLength)
+{
+  return ComposeMessage (i_Data,
+                         i_pMessageBuffer,
+                         i_MessageBufferLength,
+                         o_MessageLength,
+                         true);
+}
+
+//--------------------------------------------------------------------
+EResult UCOP::ComposeRequest (UCOPData& i_Data,
+                              uint8_t*  i_pMessageBuffer,
+                              uint8_t   i_MessageBufferLength,
+                              uint16_t& o_MessageLength)
+{
+  return ComposeMessage (i_Data,
+                         i_pMessageBuffer,
+                         i_MessageBufferLength,
+                         o_MessageLength,
+                         false);
+}
+
+//--------------------------------------------------------------------
+void UCOP::PrintConfig ()
+{
+  Serial << "DeviceIdsUsed = " << m_DeviceIdsUsed << endl;
+  Serial << "MessageIdUsed = " << m_MessageIdUsed << endl;
+  Serial << "TimestampUsed = " << m_TimestampUsed << endl;
+  Serial << "DeviceId      = " << m_DeviceId << " = 0x" << _HEX8 (m_DeviceId) << endl;
+  Serial << "ChecksumType  = " << (uint8_t)m_ChecksumType << endl;
+}
+
+//--------------------------------------------------------------------
 void UCOP::UpdateTimestamp ()
 {
   unsigned long secondsSinceMillis0 = millis () / 1000;
@@ -344,7 +382,43 @@ void UCOP::UpdateTimestamp ()
 }
 
 //--------------------------------------------------------------------
-::EResult UCOP::ComposeMessage (UcopData& i_Data,
+::EResult UCOP::WriteConfigToEEPROM (uint16_t i_Address)
+{
+  if (c_EepromConfigTotalSize + i_Address > EEPROM.length ())
+    return ::EResult::FAIL_EEPROM_IndexOutsideRange;
+
+  EEPROM.put (i_Address + 0, m_DeviceIdsUsed);
+  EEPROM.put (i_Address + 1, m_MessageIdUsed);
+  EEPROM.put (i_Address + 2, m_TimestampUsed);
+  EEPROM.put (i_Address + 3, m_DeviceId);
+  EEPROM.put (i_Address + 7, m_ChecksumType);
+
+  uint8_t byteValue = 0;
+  uint8_t checksum = m_Crc8.maxim (&byteValue, 1);
+  for (int index = 0; index < c_EepromConfigDataSize; index++)
+  {
+    byteValue = EEPROM.read (i_Address + index);
+    checksum = m_Crc8.maxim_upd (&byteValue, 1);
+  }
+  EEPROM.put (i_Address + 8, checksum);
+
+  return ::EResult::SUCCESS;
+}
+
+//--------------------------------------------------------------------
+::EResult UCOP::CheckConfig (uint32_t            i_DeviceId,
+                             UCOP::EChecksumType i_ChecksumType)
+{
+  if (i_DeviceId == 0)
+    return ::EResult::FAIL_Device_IdInvalid;
+  if (!IsChecksumValid (i_ChecksumType))
+    return ::EResult::FAIL_Device_ConfigInvalid;
+
+  return ::EResult::SUCCESS;
+}
+
+//--------------------------------------------------------------------
+::EResult UCOP::ComposeMessage (UCOPData& i_Data,
                                 uint8_t*  i_pMessageBuffer,
                                 uint8_t   i_MessageBufferLength,
                                 uint16_t& o_MessageLength,
@@ -468,29 +542,6 @@ void UCOP::UpdateTimestamp ()
   return ::EResult::SUCCESS;
 }
 
-
-//--------------------------------------------------------------------
-::EResult UCOP::CheckConfig (uint32_t            i_DeviceId,
-                             UCOP::EChecksumType i_ChecksumType)
-{
-  if (i_DeviceId == 0)
-    return ::EResult::FAIL_Device_IdInvalid;
-  if (!IsChecksumValid (i_ChecksumType))
-    return ::EResult::FAIL_Device_ConfigInvalid;
-
-  return ::EResult::SUCCESS;
-}
-
-//--------------------------------------------------------------------
-void UCOP::PrintConfig ()
-{
-  Serial << "DeviceIdsUsed = " << m_DeviceIdsUsed << endl;
-  Serial << "MessageIdUsed = " << m_MessageIdUsed << endl;
-  Serial << "TimestampUsed = " << m_TimestampUsed << endl;
-  Serial << "DeviceId      = " << m_DeviceId << " = 0x" << _HEX8 (m_DeviceId) << endl;
-  Serial << "ChecksumType  = " << (uint8_t)m_ChecksumType << endl;
-}
-
 //--------------------------------------------------------------------
 ::EResult UCOP::ReadConfigFromEEPROM (uint16_t i_Address)
 {
@@ -529,30 +580,6 @@ void UCOP::PrintConfig ()
   m_TimestampUsed = timestampUsed;
   m_DeviceId      = deviceId;
   m_ChecksumType  = checksumType;
-
-  return ::EResult::SUCCESS;
-}
-
-//--------------------------------------------------------------------
-::EResult UCOP::WriteConfigToEEPROM (uint16_t i_Address)
-{
-  if (c_EepromConfigTotalSize + i_Address > EEPROM.length ())
-    return ::EResult::FAIL_EEPROM_IndexOutsideRange;
-
-  EEPROM.put (i_Address + 0, m_DeviceIdsUsed);
-  EEPROM.put (i_Address + 1, m_MessageIdUsed);
-  EEPROM.put (i_Address + 2, m_TimestampUsed);
-  EEPROM.put (i_Address + 3, m_DeviceId);
-  EEPROM.put (i_Address + 7, m_ChecksumType);
-
-  uint8_t byteValue = 0;
-  uint8_t checksum = m_Crc8.maxim (&byteValue, 1);
-  for (int index = 0; index < c_EepromConfigDataSize; index++)
-  {
-    byteValue = EEPROM.read (i_Address + index);
-    checksum = m_Crc8.maxim_upd (&byteValue, 1);
-  }
-  EEPROM.put (i_Address + 8, checksum);
 
   return ::EResult::SUCCESS;
 }

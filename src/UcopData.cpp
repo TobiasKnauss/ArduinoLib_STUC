@@ -1,12 +1,12 @@
-#include "UcopData.h"
+#include "UCOPData.h"
 
 //--------------------------------------------------------------------
-UcopData::UcopData ()
+UCOPData::UCOPData ()
 {
 }
 
 //--------------------------------------------------------------------
-UcopData::UcopData (bool      i_ActionIsWrite,
+UCOPData::UCOPData (bool      i_ActionIsWrite,
                     uint32_t  i_RemoteDeviceId,
                     uint16_t  i_CommandId)
 {
@@ -16,7 +16,7 @@ UcopData::UcopData (bool      i_ActionIsWrite,
 }
 
 //--------------------------------------------------------------------
-UcopData::UcopData (bool                  i_ActionIsWrite,
+UCOPData::UCOPData (bool                  i_ActionIsWrite,
                     uint32_t              i_RemoteDeviceId,
                     uint32_t              i_MessageId,
                     uint32_t              i_Timestamp,
@@ -32,7 +32,7 @@ UcopData::UcopData (bool                  i_ActionIsWrite,
 }
 
 //--------------------------------------------------------------------
-void UcopData::Clear ()
+void UCOPData::Clear ()
 {
   ActionIsWrite  = false;
   CommandId      = 0;
@@ -43,7 +43,7 @@ void UcopData::Clear ()
 }
 
 //--------------------------------------------------------------------
-void UcopData::SetPayloadInfo (uint8_t* i_pPayloadBuffer,
+void UCOPData::SetPayloadInfo (uint8_t* i_pPayloadBuffer,
                                uint8_t  i_PayloadBufferLength,
                                uint8_t  i_PayloadLength)
 {

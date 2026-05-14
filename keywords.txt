@@ -7,11 +7,9 @@
 #######################################
 
 UCOP			KEYWORD1
-UcopData		KEYWORD1
-EUcopAction		KEYWORD1
+UCOPData		KEYWORD1
 EUcopChecksumType	KEYWORD1
-EUcopMessageResult	
-EUcopMessageType	KEYWORD1
+EUcopMessageResult	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)

@@ -8,7 +8,7 @@
 #include <MemoryTools.h>
 #include <Result.h>
 
-class UcopData;
+class UCOPData;
 
 // UCOP: Universal Communication Protocol
 //
@@ -41,14 +41,14 @@ class UCOP
 
 //==================== Enums ====================
 public:
-  #define X(name) name,
   enum class EResult : uint16_t
   {
     Dummy_FirstClassFailure = (uint16_t)::EResult::Dummy_FirstClassFailure,
-    #include "UCOP_failures.h"
+    #define X(name) name,
+    #include "UCOP_EResult_failures.h"
+    #undef X
     Dummy_LastClassFailure
   };
-  #undef X
 
   enum class EChecksumType : uint8_t
   {
@@ -60,24 +60,11 @@ public:
 
   enum class EMessageResult : uint8_t
   {
-    None       = 0,
-    Success    = 1,
-    InProgress = 2,
-    FAIL_DummyFirst = 0x10,
-    FAIL_InternalFailure,
-    FAIL_DeviceIdInvalid,
-    FAIL_DeviceIdWrong,
-    FAIL_MessageIdInvalid,
-    FAIL_TimestampInvalid,
-    FAIL_TimestampTooOld,
-    FAIL_TimestampInTheFuture,
-    FAIL_CommandIdInvalid,
-    FAIL_CommandNotSupported,
-    FAIL_CommandExecutionAborted,
-    FAIL_CommandExecutionFailed,
-    FAIL_CommandExecutionNotAllowed,
-    FAIL_PayloadProcessing,
-    FAIL_ResultWrong,
+    #define X(name) name,
+    #include "UCOP_EMessageResult_results.h"
+    Dummy_FirstFailure = 0x10,
+    #include "UCOP_EMessageResult_failures.h"
+    #undef X
   };
 
 //==================== Fields ====================
@@ -101,10 +88,17 @@ private:
   static const uint8_t c_Action_Read  = 0x0;
   static const uint8_t c_Action_Write = 0x1;
 
-  static const char* const c_EnumNames_ClassFailures[] PROGMEM;
+  static const char* const c_EResult_ClassFailures_Names[] PROGMEM;
+  static const char* const c_EMessageResult_Results_Names[] PROGMEM;
+  static const char* const c_EMessageResult_Failures_Names[] PROGMEM;
 
   #define X(name) static const char _EResult_##name[] PROGMEM;
-  #include "UCOP_failures.h"
+  #include "UCOP_EResult_failures.h"
+  #undef X
+
+  #define X(name) static const char _EMessageResult_##name[] PROGMEM;
+  #include "UCOP_EMessageResult_results.h"
+  #include "UCOP_EMessageResult_failures.h"
   #undef X
 
   EChecksumType m_ChecksumType  = EChecksumType::None;
@@ -136,53 +130,63 @@ public:
 
 //==================== Public Methods ====================
 public:
+  //-------------------- static --------------------
+
   static uint8_t GetChecksumLength (EChecksumType i_ChecksumType);
-  static bool IsChecksumValid (EChecksumType i_ChecksumType);
-  
+
   static EMessageResult GetMessageResultForAnalysisResult (::EResult i_Result);
+
+  static const __FlashStringHelper* GetMessageResultText (EMessageResult i_MessageResult);
+
   static const __FlashStringHelper* GetResultText (::EResult i_Result);
+  
+  static bool IsChecksumValid (EChecksumType i_ChecksumType);
+
+  //-------------------- instance --------------------
 
   ::EResult AnalyseMessage (uint8_t*  i_pRingBuffer,
                             uint16_t  i_RingBufferLength,
                             uint16_t& io_RingBufferStartIndex,
-                            UcopData& io_Data,
+                            UCOPData& io_Data,
                             bool&     o_MessageTypeIsReply,
                             uint8_t&  o_MessageLength);
 
-  ::EResult ComposeRequest (UcopData& i_Data,
-                            uint8_t*  i_pMessageBuffer,
-                            uint8_t   i_MessageBufferLength,
-                            uint16_t& o_MessageLength);
+  uint8_t CalcHeaderSize ();
 
-  ::EResult ComposeReply (UcopData& i_Data,
+  uint8_t CalcTrailerSize ();
+
+  ::EResult ComposeReply (UCOPData& i_Data,
                           uint8_t*  i_pMessageBuffer,
                           uint8_t   i_MessageBufferLength,
                           uint16_t& o_MessageLength);
 
-  uint8_t CalcHeaderSize ();
-  uint8_t CalcTrailerSize ();
+  ::EResult ComposeRequest (UCOPData& i_Data,
+                            uint8_t*  i_pMessageBuffer,
+                            uint8_t   i_MessageBufferLength,
+                            uint16_t& o_MessageLength);
+
+  void PrintConfig ();
 
   void UpdateTimestamp ();
 
+  ::EResult WriteConfigToEEPROM (uint16_t i_Address);
+
+//==================== Private Methods ====================
 private:
-  ::EResult ComposeMessage (UcopData& i_Data,
+  //-------------------- static --------------------
+
+  static ::EResult CheckConfig (uint32_t      i_DeviceId,
+                                EChecksumType i_ChecksumType);
+
+  //-------------------- instance --------------------
+
+  ::EResult ComposeMessage (UCOPData& i_Data,
                             uint8_t*  i_pMessageBuffer,
                             uint8_t   i_MessageBufferLength,
                             uint16_t& o_MessageLength,
                             bool      i_MessageIsReply);
 
-
-  static ::EResult CheckConfig (uint32_t      i_DeviceId,
-                                EChecksumType i_ChecksumType);
-
-public:
-  void PrintConfig ();
-
-private:
   ::EResult ReadConfigFromEEPROM (uint16_t i_Address);
-
-public:
-  ::EResult WriteConfigToEEPROM (uint16_t i_Address);
 };
 
 #endif

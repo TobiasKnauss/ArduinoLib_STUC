@@ -38,7 +38,7 @@ void setup ()
   Serial << "UCOP ctor Result: " << (int)result << " = " << UCOP::GetResultText (result) << endl;
 
   uint16_t messageLength = 0;
-  UcopData stucData = UcopData (EUcopAction::Read, 258, 42);
+  UCOPData stucData = UCOPData (EUcopAction::Read, 258, 42);
   stucData.SetPayloadInfo (m_PayloadSendBuffer, sizeof (m_PayloadSendBuffer), payloadLength);
   result = m_pUCOP->ComposeRequest (stucData, m_SendBuffer, sizeof (m_SendBuffer), messageLength);
   Serial << "ComposeRequest() Result: " << (int)result << " = " << UCOP::GetResultText (result) << ", MsgLen=" << messageLength << endl;
@@ -64,7 +64,7 @@ void setup ()
   memcpy (m_ReceiveBuffer, m_ReceiveBuffer + 35, messageLength - msgWrap);
   Memory_PrintLn (m_ReceiveBuffer, sizeof (m_ReceiveBuffer));
 
-  UcopData          recvData;
+  UCOPData          recvData;
   recvData.SetPayloadInfo (m_PayloadRecvBuffer, sizeof (m_PayloadRecvBuffer));
   EUcopMessageType  recvMessageType   = EUcopMessageType::None;
   uint8_t           recvMessageLength = 0;
