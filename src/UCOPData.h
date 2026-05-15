@@ -9,11 +9,11 @@ struct UCOPData
 {
 //==================== Fields ====================
   bool                  ActionIsWrite       = false;
-  uint16_t              CommandId           = 0;
-  uint32_t              MessageId           = 0;
-  UCOP::EMessageResult  MessageResult       = UCOP::EMessageResult::None;
-  uint32_t              RemoteDeviceId      = 0;
-  uint32_t              Timestamp           = 0;
+  uint16_t              CommandId           = 0;      // in valid data this may NEVER be zero.
+  uint32_t              MessageId           = 0;      // may be zero if not used.
+  UCOP::EMessageResult  MessageResult       = UCOP::EMessageResult::None; // may be zero (=None) in requests.
+  uint32_t              RemoteDeviceId      = 0;      // may be zero if not used.
+  uint32_t              Timestamp           = 0;      // may be zero if not used.
   uint8_t*              pPayloadBuffer      = 0;
   uint8_t               PayloadBufferLength = 0;
   uint8_t               PayloadLength       = 0;
@@ -34,6 +34,8 @@ struct UCOPData
 
 //==================== Public Methods ====================
   void Clear ();
+
+  bool IsEmpty ();
   
   void SetPayloadInfo (uint8_t* i_pPayloadBuffer,
                        uint8_t  i_PayloadBufferLength,

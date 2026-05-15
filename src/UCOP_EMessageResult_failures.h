@@ -1,6 +1,5 @@
 X(FAIL_InternalFailure                  )
 X(FAIL_DeviceIdInvalid                  )
-X(FAIL_DeviceIdWrong                    )
 X(FAIL_MessageIdInvalid                 )
 X(FAIL_TimestampInvalid                 )
 X(FAIL_TimestampTooOld                  )

@@ -43,6 +43,12 @@ void UCOPData::Clear ()
 }
 
 //--------------------------------------------------------------------
+bool UCOPData::IsEmpty ()
+{
+  return CommandId > 0;  // The command ID must never be zero if data exists. All other values may be zero.
+}
+
+//--------------------------------------------------------------------
 void UCOPData::SetPayloadInfo (uint8_t* i_pPayloadBuffer,
                                uint8_t  i_PayloadBufferLength,
                                uint8_t  i_PayloadLength)

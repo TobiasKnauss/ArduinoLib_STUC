@@ -72,18 +72,18 @@ uint8_t UCOP::GetChecksumLength (EChecksumType i_ChecksumType)
 }
 
 //--------------------------------------------------------------------
-UCOP::EMessageResult UCOP::GetMessageResultForAnalysisResult (::EResult i_Result)
+UCOP::EMessageResult UCOP::GetMessageResultForFunctionResult (::EResult i_Result)
 {
   switch ((EResult)i_Result)
   {
-  case EResult::FAIL_UCOP_Message_NotFound:               return EMessageResult::None;
-  case EResult::FAIL_UCOP_Message_RemoteDeviceIdInvalid:  return EMessageResult::FAIL_DeviceIdInvalid;
-  case EResult::FAIL_UCOP_Message_OwnDeviceIdWrong:       return EMessageResult::FAIL_DeviceIdWrong;
-  case EResult::FAIL_UCOP_Message_MessageIdInvalid:       return EMessageResult::FAIL_MessageIdInvalid;
-  case EResult::FAIL_UCOP_Message_TimestampInvalid:       return EMessageResult::FAIL_TimestampInvalid;
-  case EResult::FAIL_UCOP_Message_CommandIdInvalid:       return EMessageResult::FAIL_CommandIdInvalid;
-  case EResult::FAIL_UCOP_Message_ResultWrong:            return EMessageResult::FAIL_ResultWrong;
-  default:                                                return EMessageResult::FAIL_InternalFailure;
+  case EResult::FAIL_UCOP_Message_NotFound:                 return EMessageResult::None;
+  case EResult::FAIL_UCOP_Message_ReceiverDeviceIdMismatch: return EMessageResult::None;
+  case EResult::FAIL_UCOP_Message_SenderDeviceIdInvalid:    return EMessageResult::FAIL_DeviceIdInvalid;
+  case EResult::FAIL_UCOP_Message_MessageIdInvalid:         return EMessageResult::FAIL_MessageIdInvalid;
+  case EResult::FAIL_UCOP_Message_TimestampInvalid:         return EMessageResult::FAIL_TimestampInvalid;
+  case EResult::FAIL_UCOP_Message_CommandIdInvalid:         return EMessageResult::FAIL_CommandIdInvalid;
+  case EResult::FAIL_UCOP_Message_ResultWrong:              return EMessageResult::FAIL_ResultWrong;
+  default:                                                  return EMessageResult::FAIL_InternalFailure;
   }
 }
 
@@ -112,12 +112,64 @@ bool UCOP::IsChecksumValid (EChecksumType i_ChecksumType)
 }
 
 //--------------------------------------------------------------------
-EResult UCOP::AnalyseMessage (uint8_t*  i_pRingBuffer,
-                              uint16_t  i_RingBufferLength,
-                              uint16_t& io_RingBufferStartIndex,
-                              UCOPData& io_Data,
-                              bool&     o_MessageTypeIsReply,
-                              uint8_t&  o_MessageLength)
+uint8_t UCOP::CalcHeaderSize ()
+{
+  return c_HeaderMinLength
+       + (m_DeviceIdsUsed ? 8 : 0)
+       + (m_MessageIdUsed ? 4 : 0)
+       + (m_TimestampUsed ? 4 : 0);
+}
+
+//--------------------------------------------------------------------
+uint8_t UCOP::CalcTrailerSize ()
+{
+  return c_TrailerMinLength
+       + GetChecksumLength (m_ChecksumType);
+}
+
+//--------------------------------------------------------------------
+EResult UCOP::ComposeReply (UCOPData& i_Data,
+                            byte*     i_pMessageBuffer,
+                            byte      i_MessageBufferLength,
+                            uint16_t& o_MessageLength)
+{
+  return ComposeMessage (i_Data,
+                         i_pMessageBuffer,
+                         i_MessageBufferLength,
+                         o_MessageLength,
+                         true);
+}
+
+//--------------------------------------------------------------------
+EResult UCOP::ComposeRequest (UCOPData& i_Data,
+                              uint8_t*  i_pMessageBuffer,
+                              uint8_t   i_MessageBufferLength,
+                              uint16_t& o_MessageLength)
+{
+  return ComposeMessage (i_Data,
+                         i_pMessageBuffer,
+                         i_MessageBufferLength,
+                         o_MessageLength,
+                         false);
+}
+
+//--------------------------------------------------------------------
+void UCOP::PrintConfig ()
+{
+  Serial << "DeviceIdsUsed = " << m_DeviceIdsUsed << endl;
+  Serial << "MessageIdUsed = " << m_MessageIdUsed << endl;
+  Serial << "TimestampUsed = " << m_TimestampUsed << endl;
+  Serial << "DeviceId      = " << m_DeviceId << " = 0x" << _HEX8 (m_DeviceId) << endl;
+  Serial << "ChecksumType  = " << (uint8_t)m_ChecksumType << endl;
+}
+
+//--------------------------------------------------------------------
+EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
+                             uint16_t  i_RingBufferLength,
+                             uint16_t& io_RingBufferStartIndex,
+                             UCOPData& io_Data,
+                             bool&     o_MessageTypeIsReply,
+                             uint8_t&  o_MessageLength)
 {
   if (i_pRingBuffer == 0)
     return ::EResult::FAIL_Pointer_IsZero;
@@ -177,14 +229,16 @@ EResult UCOP::AnalyseMessage (uint8_t*  i_pRingBuffer,
     {
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.RemoteDeviceId))
         return ::EResult::FAIL_Buffer_GetValue;
-      if (io_Data.RemoteDeviceId == 0)
-        result = (::EResult)EResult::FAIL_UCOP_Message_RemoteDeviceIdInvalid;
+      if (io_Data.RemoteDeviceId == 0
+      &&  result == ::EResult::InProgress)
+        result = (::EResult)EResult::FAIL_UCOP_Message_SenderDeviceIdInvalid;
       
       uint32_t ownDeviceId;
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, ownDeviceId))
         return ::EResult::FAIL_Buffer_GetValue;
-      if (ownDeviceId != m_DeviceId)
-        result = (::EResult)EResult::FAIL_UCOP_Message_OwnDeviceIdWrong;
+      if (ownDeviceId != m_DeviceId
+      &&  result == ::EResult::InProgress)
+        result = (::EResult)EResult::FAIL_UCOP_Message_ReceiverDeviceIdMismatch;
     }
 
     // Flag: MessageIdUsed
@@ -192,7 +246,8 @@ EResult UCOP::AnalyseMessage (uint8_t*  i_pRingBuffer,
     {
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.MessageId))
         return ::EResult::FAIL_Buffer_GetValue;
-      if (io_Data.MessageId == 0)
+      if (io_Data.MessageId == 0
+      &&  result == ::EResult::InProgress)
         result = (::EResult)EResult::FAIL_UCOP_Message_MessageIdInvalid;
     }
 
@@ -201,21 +256,24 @@ EResult UCOP::AnalyseMessage (uint8_t*  i_pRingBuffer,
     {
       if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.Timestamp))
         return ::EResult::FAIL_Buffer_GetValue;
-      if (io_Data.Timestamp == 0)
+      if (io_Data.Timestamp == 0
+      &&  result == ::EResult::InProgress)
         result = (::EResult)EResult::FAIL_UCOP_Message_TimestampInvalid;
     }
 
     // Command ID
     if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.CommandId))
       return ::EResult::FAIL_Buffer_GetValue;
-    if (io_Data.CommandId == 0)
+    if (io_Data.CommandId == 0
+    &&  result == ::EResult::InProgress)
       result = (::EResult)EResult::FAIL_UCOP_Message_CommandIdInvalid;
 
     // Result
     if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, valueUI8))
       return ::EResult::FAIL_Buffer_GetValue;
     io_Data.MessageResult = (EMessageResult)valueUI8;
-    if ((io_Data.MessageResult == EMessageResult::None) == o_MessageTypeIsReply)  // failure if (reply and no result) or (request and result)
+    if ((io_Data.MessageResult == EMessageResult::None) == o_MessageTypeIsReply  // failure if (reply and no result) or (request and result)
+    &&  result == ::EResult::InProgress)
       result = (::EResult)EResult::FAIL_UCOP_Message_ResultWrong;
 
     // Payload data length
@@ -317,58 +375,6 @@ EResult UCOP::AnalyseMessage (uint8_t*  i_pRingBuffer,
   }
 
   return (::EResult)EResult::FAIL_UCOP_Message_NotFound;
-}
-
-//--------------------------------------------------------------------
-uint8_t UCOP::CalcHeaderSize ()
-{
-  return c_HeaderMinLength
-       + (m_DeviceIdsUsed ? 8 : 0)
-       + (m_MessageIdUsed ? 4 : 0)
-       + (m_TimestampUsed ? 4 : 0);
-}
-
-//--------------------------------------------------------------------
-uint8_t UCOP::CalcTrailerSize ()
-{
-  return c_TrailerMinLength
-       + GetChecksumLength (m_ChecksumType);
-}
-
-//--------------------------------------------------------------------
-EResult UCOP::ComposeReply (UCOPData& i_Data,
-                            byte*     i_pMessageBuffer,
-                            byte      i_MessageBufferLength,
-                            uint16_t& o_MessageLength)
-{
-  return ComposeMessage (i_Data,
-                         i_pMessageBuffer,
-                         i_MessageBufferLength,
-                         o_MessageLength,
-                         true);
-}
-
-//--------------------------------------------------------------------
-EResult UCOP::ComposeRequest (UCOPData& i_Data,
-                              uint8_t*  i_pMessageBuffer,
-                              uint8_t   i_MessageBufferLength,
-                              uint16_t& o_MessageLength)
-{
-  return ComposeMessage (i_Data,
-                         i_pMessageBuffer,
-                         i_MessageBufferLength,
-                         o_MessageLength,
-                         false);
-}
-
-//--------------------------------------------------------------------
-void UCOP::PrintConfig ()
-{
-  Serial << "DeviceIdsUsed = " << m_DeviceIdsUsed << endl;
-  Serial << "MessageIdUsed = " << m_MessageIdUsed << endl;
-  Serial << "TimestampUsed = " << m_TimestampUsed << endl;
-  Serial << "DeviceId      = " << m_DeviceId << " = 0x" << _HEX8 (m_DeviceId) << endl;
-  Serial << "ChecksumType  = " << (uint8_t)m_ChecksumType << endl;
 }
 
 //--------------------------------------------------------------------

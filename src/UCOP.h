@@ -134,7 +134,7 @@ public:
 
   static uint8_t GetChecksumLength (EChecksumType i_ChecksumType);
 
-  static EMessageResult GetMessageResultForAnalysisResult (::EResult i_Result);
+  static EMessageResult GetMessageResultForFunctionResult (::EResult i_Result);
 
   static const __FlashStringHelper* GetMessageResultText (EMessageResult i_MessageResult);
 
@@ -143,13 +143,6 @@ public:
   static bool IsChecksumValid (EChecksumType i_ChecksumType);
 
   //-------------------- instance --------------------
-
-  ::EResult AnalyseMessage (uint8_t*  i_pRingBuffer,
-                            uint16_t  i_RingBufferLength,
-                            uint16_t& io_RingBufferStartIndex,
-                            UCOPData& io_Data,
-                            bool&     o_MessageTypeIsReply,
-                            uint8_t&  o_MessageLength);
 
   uint8_t CalcHeaderSize ();
 
@@ -166,6 +159,13 @@ public:
                             uint16_t& o_MessageLength);
 
   void PrintConfig ();
+
+  ::EResult SearchMessage (uint8_t*  i_pRingBuffer,
+                           uint16_t  i_RingBufferLength,
+                           uint16_t& io_RingBufferStartIndex,
+                           UCOPData& io_Data,
+                           bool&     o_MessageTypeIsReply,
+                           uint8_t&  o_MessageLength);
 
   void UpdateTimestamp ();
 
