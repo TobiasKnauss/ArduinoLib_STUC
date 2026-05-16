@@ -69,6 +69,8 @@ public:
 
 //==================== Fields ====================
 private:
+  //-------------------- static --------------------
+
   static const uint8_t c_EepromConfigDataSize  = 8;
   static const uint8_t c_EepromConfigTotalSize = 9;
   static const uint8_t c_MessageStartID = 0x02;  // STX
@@ -101,16 +103,14 @@ private:
   #include "UCOP_EMessageResult_failures.h"
   #undef X
 
+  //-------------------- instance --------------------
+
   EChecksumType m_ChecksumType  = EChecksumType::None;
   uint32_t      m_DeviceId      = 0;
   bool          m_DeviceIdsUsed = false;
+  uint32_t      m_MessageId     = 0;
   bool          m_MessageIdUsed = false;
   bool          m_TimestampUsed = false;
-
-  uint32_t      m_MessageId       = 0;
-  uint32_t      m_SecondsSinceMillis0_LastValue = 0;
-  uint32_t      m_TimestampOffset = 0;
-  uint32_t      m_Timestamp       = 0;
 
   FastCRC8  m_Crc8;
   FastCRC16 m_Crc16;
@@ -118,6 +118,8 @@ private:
 
 //==================== Constructors ====================
 public:
+  //-------------------- instance --------------------
+
   UCOP (uint16_t    i_EepromAddress,
         ::EResult&  o_Result);
 
@@ -166,8 +168,6 @@ public:
                            UCOPData& io_Data,
                            bool&     o_MessageTypeIsReply,
                            uint8_t&  o_MessageLength);
-
-  void UpdateTimestamp ();
 
   ::EResult WriteConfigToEEPROM (uint16_t i_Address);
 

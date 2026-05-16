@@ -5,9 +5,12 @@
 
 #include "UCOP.h"
 
-struct UCOPData
+class UCOPData
 {
 //==================== Fields ====================
+public:
+  //-------------------- instance --------------------
+
   bool                  ActionIsWrite       = false;
   uint16_t              CommandId           = 0;      // in valid data this may NEVER be zero.
   uint32_t              MessageId           = 0;      // may be zero if not used.
@@ -19,6 +22,14 @@ struct UCOPData
   uint8_t               PayloadLength       = 0;
 
 //==================== Constructors ====================
+public:
+  //-------------------- static --------------------
+
+  static UCOPData Create_CommandNotSupported (UCOPData& i_RequestData,
+                                              uint32_t  i_Timestamp);
+
+  //-------------------- instance --------------------
+
   UCOPData ();
 
   UCOPData (bool      i_ActionIsWrite,
@@ -33,6 +44,9 @@ struct UCOPData
             UCOP::EMessageResult  i_MessageResult);
 
 //==================== Public Methods ====================
+public:
+  //-------------------- instance --------------------
+
   void Clear ();
 
   bool IsEmpty ();

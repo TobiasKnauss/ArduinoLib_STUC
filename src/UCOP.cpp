@@ -378,16 +378,6 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
 }
 
 //--------------------------------------------------------------------
-void UCOP::UpdateTimestamp ()
-{
-  unsigned long secondsSinceMillis0 = millis () / 1000;
-  if (secondsSinceMillis0 < m_SecondsSinceMillis0_LastValue) // overflow happened
-    m_TimestampOffset += 4294967;
-  m_SecondsSinceMillis0_LastValue = secondsSinceMillis0;
-  m_Timestamp = m_TimestampOffset + secondsSinceMillis0;
-}
-
-//--------------------------------------------------------------------
 ::EResult UCOP::WriteConfigToEEPROM (uint16_t i_Address)
 {
   if (c_EepromConfigTotalSize + i_Address > EEPROM.length ())
@@ -499,9 +489,8 @@ void UCOP::UpdateTimestamp ()
   // Timestamp
   if (m_TimestampUsed)
   {
-    UpdateTimestamp ();
-    memcpy (pMessageBuffer, &m_Timestamp, sizeof (m_Timestamp));
-    pMessageBuffer += sizeof (m_Timestamp);
+    memcpy (pMessageBuffer, &i_Data.Timestamp, sizeof (i_Data.Timestamp));
+    pMessageBuffer += sizeof (i_Data.Timestamp);
   }
 
   // Command ID
