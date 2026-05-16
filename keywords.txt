@@ -15,7 +15,6 @@ EUcopMessageResult	KEYWORD1
 # Methods and Functions (KEYWORD2)
 #######################################
 
-AnalyseMessage		KEYWORD2
 CalcHeaderSize		KEYWORD2
 CalcTrailerSize		KEYWORD2
 CheckConfig		KEYWORD2
@@ -27,6 +26,7 @@ GetResultText		KEYWORD2
 IsChecksumValid		KEYWORD2
 PrintConfig		KEYWORD2
 ReadConfigFromEEPROM	KEYWORD2
+SearchMessage		KEYWORD2
 UpdateTimestamp		KEYWORD2
 WriteConfigToEEPROM	KEYWORD2
 

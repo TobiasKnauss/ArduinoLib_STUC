@@ -72,13 +72,13 @@ void setup ()
   uint16_t bufferStartIndex = 0;
   do
   {
-    result = m_pUCOP->AnalyseMessage (m_ReceiveBuffer,
-                                      sizeof (m_ReceiveBuffer),
-                                      bufferStartIndex,
-                                      recvData,
-                                      recvMessageType,
-                                      recvMessageLength);
-    Serial << "AnalyseMessage() Result: " << (int)result << " = " << UCOP::GetResultText (result) << endl;
+    result = m_pUCOP->SearchMessage (m_ReceiveBuffer,
+                                     sizeof (m_ReceiveBuffer),
+                                     bufferStartIndex,
+                                     recvData,
+                                     recvMessageType,
+                                     recvMessageLength);
+    Serial << "SearchMessage() Result: " << (int)result << " = " << UCOP::GetResultText (result) << endl;
     Serial << F("Message Type:        ") << (uint8_t)recvMessageType        << endl;
     Serial << F("Action:              ") << (uint8_t)recvData.Action        << endl;
     Serial << F("Remote Device Id:    ") << recvData.RemoteDeviceId         << endl;

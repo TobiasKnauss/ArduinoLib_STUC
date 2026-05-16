@@ -186,7 +186,7 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
   // Execute multiple attempts to search the start of the message:
   // - In each attempt, the message start ID is searched by looping over the buffer.
   // - When the message start ID is found, it is assumed that a complete message follows.
-  // - The found possible message is analysed. If it is a valid message, it is evaluated. If not, the next search attempt is started one byte after the previously found message start ID.
+  // - The found possible message is analyzed. If it is a valid message, it is evaluated. If not, the next search attempt is started one byte after the previously found message start ID.
 
   for (uint16_t searchIndex = 0; searchIndex < i_RingBufferLength; searchIndex++)
   {
@@ -203,19 +203,19 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
 
     uint8_t  valueUI8;
     uint16_t valueUI16;
-    uint8_t* pAnalyse = pSearch;
-    RingBuffer_IncrementPointer (i_pRingBuffer, i_RingBufferLength, pAnalyse);
+    uint8_t* pAnalyze = pSearch;
+    RingBuffer_IncrementPointer (i_pRingBuffer, i_RingBufferLength, pAnalyze);
 
     // Version
     uint8_t version;
-    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, version))
+    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, version))
       return ::EResult::FAIL_Buffer_GetValue;
     if (version != c_Version)
       continue;
     
     // Flags
     uint8_t flags = 0;
-    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, flags))
+    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, flags))
       return ::EResult::FAIL_Buffer_GetValue;
 
     // Flag: MessageType
@@ -227,14 +227,14 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
     // Flag: DeviceIdsUsed
     if (flags & 1 << c_FlagIndex_DeviceIdsUsed)
     {
-      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.RemoteDeviceId))
+      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, io_Data.RemoteDeviceId))
         return ::EResult::FAIL_Buffer_GetValue;
       if (io_Data.RemoteDeviceId == 0
       &&  result == ::EResult::InProgress)
         result = (::EResult)EResult::FAIL_UCOP_Message_SenderDeviceIdInvalid;
       
       uint32_t ownDeviceId;
-      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, ownDeviceId))
+      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, ownDeviceId))
         return ::EResult::FAIL_Buffer_GetValue;
       if (ownDeviceId != m_DeviceId
       &&  result == ::EResult::InProgress)
@@ -244,7 +244,7 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
     // Flag: MessageIdUsed
     if (flags & 1 << c_FlagIndex_MessageIdUsed)
     {
-      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.MessageId))
+      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, io_Data.MessageId))
         return ::EResult::FAIL_Buffer_GetValue;
       if (io_Data.MessageId == 0
       &&  result == ::EResult::InProgress)
@@ -254,7 +254,7 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
     // Flag: TimestampUsed
     if (flags & 1 << c_FlagIndex_TimestampUsed)
     {
-      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.Timestamp))
+      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, io_Data.Timestamp))
         return ::EResult::FAIL_Buffer_GetValue;
       if (io_Data.Timestamp == 0
       &&  result == ::EResult::InProgress)
@@ -262,14 +262,14 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
     }
 
     // Command ID
-    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.CommandId))
+    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, io_Data.CommandId))
       return ::EResult::FAIL_Buffer_GetValue;
     if (io_Data.CommandId == 0
     &&  result == ::EResult::InProgress)
       result = (::EResult)EResult::FAIL_UCOP_Message_CommandIdInvalid;
 
     // Result
-    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, valueUI8))
+    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, valueUI8))
       return ::EResult::FAIL_Buffer_GetValue;
     io_Data.MessageResult = (EMessageResult)valueUI8;
     if ((io_Data.MessageResult == EMessageResult::None) == o_MessageTypeIsReply  // failure if (reply and no result) or (request and result)
@@ -277,7 +277,7 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
       result = (::EResult)EResult::FAIL_UCOP_Message_ResultWrong;
 
     // Payload data length
-    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.PayloadLength))
+    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, io_Data.PayloadLength))
       return ::EResult::FAIL_Buffer_GetValue;
     if (io_Data.PayloadLength > 0)
     {
@@ -289,7 +289,7 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
 
     //========== Payload ==========
     // Payload data length
-    if (!RingBuffer_GetBytesAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, io_Data.PayloadLength, io_Data.pPayloadBuffer))
+    if (!RingBuffer_GetBytesAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, io_Data.PayloadLength, io_Data.pPayloadBuffer))
       return ::EResult::FAIL_Buffer_GetBytes;
 
     //========== Trailer ==========
@@ -302,67 +302,67 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
     case EChecksumType::None:
       break;
     case EChecksumType::CRC8:
-      if (pAnalyse > pSearch)
-        checksumCalculated = m_Crc8.maxim (pSearch + 1, pAnalyse - pSearch - 1);
+      if (pAnalyze > pSearch)
+        checksumCalculated = m_Crc8.maxim (pSearch + 1, pAnalyze - pSearch - 1);
       else
       {
                              m_Crc8.maxim     (pSearch + 1,   i_pRingBuffer + i_RingBufferLength - pSearch - 1);
-        checksumCalculated = m_Crc8.maxim_upd (i_pRingBuffer, pAnalyse - i_pRingBuffer);
+        checksumCalculated = m_Crc8.maxim_upd (i_pRingBuffer, pAnalyze - i_pRingBuffer);
       }
-      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, valueUI8))
+      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, valueUI8))
         return ::EResult::FAIL_Buffer_GetValue;
       checksumFromMessage = valueUI8;
       break;
 
     case EChecksumType::CRC16:
-      if (pAnalyse > pSearch)
-        checksumCalculated = m_Crc16.modbus (pSearch + 1, pAnalyse - pSearch - 1);
+      if (pAnalyze > pSearch)
+        checksumCalculated = m_Crc16.modbus (pSearch + 1, pAnalyze - pSearch - 1);
       else
       {
                              m_Crc16.modbus     (pSearch + 1,   i_pRingBuffer + i_RingBufferLength - pSearch - 1);
-        checksumCalculated = m_Crc16.modbus_upd (i_pRingBuffer, pAnalyse - i_pRingBuffer);
+        checksumCalculated = m_Crc16.modbus_upd (i_pRingBuffer, pAnalyze - i_pRingBuffer);
       }
-      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, valueUI16))
+      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, valueUI16))
         return ::EResult::FAIL_Buffer_GetValue;
       checksumFromMessage = valueUI16;
       break;
 
     case EChecksumType::CRC32:
-      if (pAnalyse > pSearch)
-        checksumCalculated = m_Crc32.crc32 (pSearch + 1, pAnalyse - pSearch - 1);
+      if (pAnalyze > pSearch)
+        checksumCalculated = m_Crc32.crc32 (pSearch + 1, pAnalyze - pSearch - 1);
       else
       {
                              m_Crc32.crc32     (pSearch + 1,   i_pRingBuffer + i_RingBufferLength - pSearch - 1);
-        checksumCalculated = m_Crc32.crc32_upd (i_pRingBuffer, pAnalyse - i_pRingBuffer);
+        checksumCalculated = m_Crc32.crc32_upd (i_pRingBuffer, pAnalyze - i_pRingBuffer);
       }
-      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, checksumFromMessage))
+      if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, checksumFromMessage))
         return ::EResult::FAIL_Buffer_GetValue;
       break;
     }
 
     // ETX
     uint8_t messageEndID;
-    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyse, messageEndID))
+    if (!RingBuffer_GetValueAndMovePtr (i_pRingBuffer, i_RingBufferLength, pAnalyze, messageEndID))
       return ::EResult::FAIL_Buffer_GetValue;
     if (messageEndID == c_MessageEndID // message was found
     &&  checksumCalculated == checksumFromMessage) // message is valid
     {
-      // clear the analysed buffer part
-      if (pAnalyse > pSearch)
+      // clear the analyzed buffer part
+      if (pAnalyze > pSearch)
       {
-        o_MessageLength = pAnalyse - pSearch;
+        o_MessageLength = pAnalyze - pSearch;
         memset (pSearch, 0xDD, o_MessageLength);
       }
       else  // message wraps around at buffer end
       {
         uint8_t len1 = i_pRingBuffer + i_RingBufferLength - pSearch;
-        uint8_t len2 = pAnalyse - i_pRingBuffer;
+        uint8_t len2 = pAnalyze - i_pRingBuffer;
         o_MessageLength = len1 + len2;
         memset (pSearch,       0xDD, len1);
         memset (i_pRingBuffer, 0xDD, len2);
       }
 
-      io_RingBufferStartIndex = pAnalyse - i_pRingBuffer;
+      io_RingBufferStartIndex = pAnalyze - i_pRingBuffer;
       return result == ::EResult::InProgress ? ::EResult::SUCCESS : result;
     }
     // else: Message End ID missing -> This was no message. Previously identified failures are invalid.
