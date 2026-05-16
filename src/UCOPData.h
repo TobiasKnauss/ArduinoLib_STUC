@@ -14,7 +14,7 @@ struct UCOPData
   UCOP::EMessageResult  MessageResult       = UCOP::EMessageResult::None; // may be zero (=None) in requests.
   uint32_t              RemoteDeviceId      = 0;      // may be zero if not used.
   uint32_t              Timestamp           = 0;      // may be zero if not used.
-  uint8_t*              pPayloadBuffer      = 0;
+  uint8_t*              pPayloadBuffer      = nullptr;
   uint8_t               PayloadBufferLength = 0;
   uint8_t               PayloadLength       = 0;
 

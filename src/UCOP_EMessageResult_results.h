@@ -1,3 +1,3 @@
 X(None      )
-X(Success   )
+X(SUCCESS   )
 X(InProgress)

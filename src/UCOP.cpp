@@ -171,7 +171,7 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
                              bool&     o_MessageTypeIsReply,
                              uint8_t&  o_MessageLength)
 {
-  if (i_pRingBuffer == 0)
+  if (i_pRingBuffer == nullptr)
     return ::EResult::FAIL_Pointer_IsZero;
   if (i_RingBufferLength < c_MessageMinLength)
     return ::EResult::FAIL_Buffer_TooSmall;
@@ -281,7 +281,7 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
       return ::EResult::FAIL_Buffer_GetValue;
     if (io_Data.PayloadLength > 0)
     {
-      if (io_Data.pPayloadBuffer == 0)
+      if (io_Data.pPayloadBuffer == nullptr)
         return ::EResult::FAIL_Pointer_IsZero;
       if (io_Data.PayloadBufferLength < io_Data.PayloadLength)
         return ::EResult::FAIL_Buffer_TooSmall;
@@ -430,9 +430,7 @@ void UCOP::UpdateTimestamp ()
                                 uint16_t& o_MessageLength,
                                 bool      i_MessageIsReply)
 {
-  if (i_pMessageBuffer == 0)
-    return ::EResult::FAIL_Pointer_IsZero;
-  if (i_Data.pPayloadBuffer == 0)
+  if (i_pMessageBuffer == nullptr)
     return ::EResult::FAIL_Pointer_IsZero;
 
   uint8_t headerSize  = CalcHeaderSize ();
@@ -440,9 +438,18 @@ void UCOP::UpdateTimestamp ()
   if (i_MessageBufferLength < headerSize + i_Data.PayloadLength + trailerSize)
     return ::EResult::FAIL_Buffer_TooSmall;
 
-  bool copyPayload = i_Data.pPayloadBuffer != i_pMessageBuffer + headerSize; // Copy the payload data only if it is not yet at the correct position in the message buffer.
-  if (copyPayload && CheckMemoryAreasOverlap (i_pMessageBuffer, i_MessageBufferLength, i_Data.pPayloadBuffer, i_Data.PayloadLength)) // If the payload must be copied and the memory areas overlap, then copying is not possible.
-    return ::EResult::FAIL_Buffer_Overlap;
+  bool copyPayload = false;
+  if (i_Data.PayloadLength > 0)
+  {
+    if (i_Data.pPayloadBuffer == nullptr)
+      return ::EResult::FAIL_Pointer_IsZero;
+    if (i_Data.PayloadBufferLength < i_Data.PayloadLength)
+      return ::EResult::FAIL_Buffer_TooSmall;
+
+    copyPayload = i_Data.pPayloadBuffer != i_pMessageBuffer + headerSize; // Copy the payload data only if it is not yet at the correct position in the message buffer.
+    if (copyPayload && CheckMemoryAreasOverlap (i_pMessageBuffer, i_MessageBufferLength, i_Data.pPayloadBuffer, i_Data.PayloadLength)) // If the payload must be copied and the memory areas overlap, then copying is not possible.
+      return ::EResult::FAIL_Buffer_Overlap;
+  }
 
   //========== Header ==========
   memset (i_pMessageBuffer, 0, headerSize);
