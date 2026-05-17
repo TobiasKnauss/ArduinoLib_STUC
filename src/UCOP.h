@@ -111,6 +111,7 @@ private:
   uint32_t      m_MessageId     = 0;
   bool          m_MessageIdUsed = false;
   bool          m_TimestampUsed = false;
+  uint16_t      m_EepromAddress = 0;
 
   FastCRC8  m_Crc8;
   FastCRC16 m_Crc16;
@@ -138,6 +139,12 @@ private:
                                 bool          i_TimestampUsed,
                                 uint32_t      i_DeviceId,
                                 EChecksumType i_ChecksumType);
+
+//==================== Properties ====================
+public:
+  //-------------------- instance --------------------
+
+  uint16_t get_EepromAddress ();
 
 //==================== Public Methods ====================
 public:

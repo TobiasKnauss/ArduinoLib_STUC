@@ -52,6 +52,7 @@ UCOP::UCOP (bool          i_DeviceIdsUsed,
 UCOP::UCOP (uint16_t    i_EepromAddress,
             ::EResult&  o_Result)
 {
+  m_EepromAddress = i_EepromAddress;
   o_Result = ReadConfigFromEEPROM (i_EepromAddress);
 }
 
@@ -74,6 +75,12 @@ UCOP::UCOP (uint16_t    i_EepromAddress,
   m_ChecksumType  = i_ChecksumType;
 
   return ::EResult::SUCCESS;
+}
+
+//--------------------------------------------------------------------
+uint16_t UCOP::get_EepromAddress ()
+{
+  return m_EepromAddress;
 }
 
 //--------------------------------------------------------------------
