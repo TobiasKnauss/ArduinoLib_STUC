@@ -8,8 +8,8 @@
 
 UCOP			KEYWORD1
 UCOPData		KEYWORD1
-EUcopChecksumType	KEYWORD1
-EUcopMessageResult	KEYWORD1
+EChecksumType	KEYWORD1
+EMessageResult	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
@@ -17,11 +17,13 @@ EUcopMessageResult	KEYWORD1
 
 CalcHeaderSize		KEYWORD2
 CalcTrailerSize		KEYWORD2
-CheckConfig		KEYWORD2
+CommonConstructor	KEYWORD2
 ComposeMessage		KEYWORD2
-ComposeRequest		KEYWORD2
 ComposeReply		KEYWORD2
+ComposeRequest		KEYWORD2
 GetChecksumLength	KEYWORD2
+GetMessageResultForFunctionResult	KEYWORD2
+GetMessageResultText	KEYWORD2
 GetResultText		KEYWORD2
 IsChecksumValid		KEYWORD2
 PrintConfig		KEYWORD2

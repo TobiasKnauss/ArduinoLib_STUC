@@ -72,7 +72,7 @@ private:
   //-------------------- static --------------------
 
   static const uint8_t c_EepromConfigDataSize  = 8;
-  static const uint8_t c_EepromConfigTotalSize = 9;
+  static const uint8_t c_EepromConfigTotalSize = 10;
   static const uint8_t c_MessageStartID = 0x02;  // STX
   static const uint8_t c_MessageEndID   = 0x03;  // ETX
   static const uint8_t c_Version = 0x01;
@@ -120,15 +120,24 @@ private:
 public:
   //-------------------- instance --------------------
 
-  UCOP (uint16_t    i_EepromAddress,
-        ::EResult&  o_Result);
-
   UCOP (bool          i_DeviceIdsUsed,
         bool          i_MessageIdUsed,
         bool          i_TimestampUsed,
         uint32_t      i_DeviceId,
-        EChecksumType i_ChecksumTypet,
+        EChecksumType i_ChecksumType,
         ::EResult&    o_Result);
+
+  UCOP (uint16_t    i_EepromAddress,
+        ::EResult&  o_Result);
+
+private:
+  //-------------------- instance --------------------
+
+  ::EResult CommonConstructor ( bool          i_DeviceIdsUsed,
+                                bool          i_MessageIdUsed,
+                                bool          i_TimestampUsed,
+                                uint32_t      i_DeviceId,
+                                EChecksumType i_ChecksumType);
 
 //==================== Public Methods ====================
 public:
@@ -173,11 +182,6 @@ public:
 
 //==================== Private Methods ====================
 private:
-  //-------------------- static --------------------
-
-  static ::EResult CheckConfig (uint32_t      i_DeviceId,
-                                EChecksumType i_ChecksumType);
-
   //-------------------- instance --------------------
 
   ::EResult ComposeMessage (UCOPData& i_Data,

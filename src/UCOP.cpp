@@ -34,13 +34,6 @@ const char* const UCOP::c_EMessageResult_Failures_Names[] PROGMEM =
 #undef X
 
 //--------------------------------------------------------------------
-UCOP::UCOP (uint16_t    i_EepromAddress,
-            ::EResult&  o_Result)
-{
-  o_Result = ReadConfigFromEEPROM (i_EepromAddress);
-}
-
-//--------------------------------------------------------------------
 UCOP::UCOP (bool          i_DeviceIdsUsed,
             bool          i_MessageIdUsed,
             bool          i_TimestampUsed,
@@ -48,15 +41,39 @@ UCOP::UCOP (bool          i_DeviceIdsUsed,
             EChecksumType i_ChecksumType,
             ::EResult&    o_Result)
 {
-  o_Result = CheckConfig (i_DeviceId, i_ChecksumType);
-  if (o_Result != ::EResult::SUCCESS)
-    return;
+  o_Result = CommonConstructor (i_DeviceIdsUsed,
+                                i_MessageIdUsed,
+                                i_TimestampUsed,
+                                i_DeviceId,
+                                i_ChecksumType);
+}
+
+//--------------------------------------------------------------------
+UCOP::UCOP (uint16_t    i_EepromAddress,
+            ::EResult&  o_Result)
+{
+  o_Result = ReadConfigFromEEPROM (i_EepromAddress);
+}
+
+//--------------------------------------------------------------------
+::EResult UCOP::CommonConstructor ( bool          i_DeviceIdsUsed,
+                                    bool          i_MessageIdUsed,
+                                    bool          i_TimestampUsed,
+                                    uint32_t      i_DeviceId,
+                                    EChecksumType i_ChecksumType)
+{
+  if (i_DeviceId == 0)
+    return ::EResult::FAIL_Device_IdInvalid;
+  if (!IsChecksumValid (i_ChecksumType))
+    return ::EResult::FAIL_Device_ConfigInvalid;
 
   m_DeviceIdsUsed = i_DeviceIdsUsed;
   m_MessageIdUsed = i_MessageIdUsed;
   m_TimestampUsed = i_TimestampUsed;
   m_DeviceId      = i_DeviceId;
   m_ChecksumType  = i_ChecksumType;
+
+  return ::EResult::SUCCESS;
 }
 
 //--------------------------------------------------------------------
@@ -156,11 +173,11 @@ EResult UCOP::ComposeRequest (UCOPData& i_Data,
 //--------------------------------------------------------------------
 void UCOP::PrintConfig ()
 {
-  Serial << "DeviceIdsUsed = " << m_DeviceIdsUsed << endl;
-  Serial << "MessageIdUsed = " << m_MessageIdUsed << endl;
-  Serial << "TimestampUsed = " << m_TimestampUsed << endl;
-  Serial << "DeviceId      = " << m_DeviceId << " = 0x" << _HEX8 (m_DeviceId) << endl;
-  Serial << "ChecksumType  = " << (uint8_t)m_ChecksumType << endl;
+  Serial << F("DeviceIdsUsed = ") << m_DeviceIdsUsed << endl;
+  Serial << F("MessageIdUsed = ") << m_MessageIdUsed << endl;
+  Serial << F("TimestampUsed = ") << m_TimestampUsed << endl;
+  Serial << F("DeviceId      = ") << m_DeviceId << " = 0x" << _HEX8 (m_DeviceId) << endl;
+  Serial << F("ChecksumType  = ") << (uint8_t)m_ChecksumType << endl;
 }
 
 //--------------------------------------------------------------------
@@ -389,26 +406,14 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
   EEPROM.put (i_Address + 3, m_DeviceId);
   EEPROM.put (i_Address + 7, m_ChecksumType);
 
-  uint8_t byteValue = 0;
-  uint8_t checksum = m_Crc8.maxim (&byteValue, 1);
+  uint8_t  byteValue = 0;
+  uint16_t checksum = m_Crc16.modbus (&byteValue, 1);
   for (int index = 0; index < c_EepromConfigDataSize; index++)
   {
     byteValue = EEPROM.read (i_Address + index);
-    checksum = m_Crc8.maxim_upd (&byteValue, 1);
+    checksum = m_Crc16.modbus_upd (&byteValue, 1);
   }
   EEPROM.put (i_Address + 8, checksum);
-
-  return ::EResult::SUCCESS;
-}
-
-//--------------------------------------------------------------------
-::EResult UCOP::CheckConfig (uint32_t            i_DeviceId,
-                             UCOP::EChecksumType i_ChecksumType)
-{
-  if (i_DeviceId == 0)
-    return ::EResult::FAIL_Device_IdInvalid;
-  if (!IsChecksumValid (i_ChecksumType))
-    return ::EResult::FAIL_Device_ConfigInvalid;
 
   return ::EResult::SUCCESS;
 }
@@ -547,41 +552,38 @@ EResult UCOP::SearchMessage (uint8_t*  i_pRingBuffer,
 //--------------------------------------------------------------------
 ::EResult UCOP::ReadConfigFromEEPROM (uint16_t i_Address)
 {
+  if (c_EepromConfigTotalSize + i_Address > EEPROM.length ())
+    return ::EResult::FAIL_EEPROM_IndexOutsideRange;
+
   bool                deviceIdsUsed;
   bool                messageIdUsed;
   bool                timestampUsed;
   uint32_t            deviceId;
   UCOP::EChecksumType checksumType;
-  uint8_t configChecksumCRC8;
-
-  if (c_EepromConfigTotalSize + i_Address > EEPROM.length ())
-    return ::EResult::FAIL_EEPROM_IndexOutsideRange;
+  uint16_t            configChecksumCRC16;
 
   EEPROM.get (i_Address + 0, deviceIdsUsed);
   EEPROM.get (i_Address + 1, messageIdUsed);
   EEPROM.get (i_Address + 2, timestampUsed);
   EEPROM.get (i_Address + 3, deviceId);
   EEPROM.get (i_Address + 7, checksumType);
-  EEPROM.get (i_Address + 8, configChecksumCRC8);
+  EEPROM.get (i_Address + 8, configChecksumCRC16);
 
-  uint8_t byteValue = 0;
-  uint8_t checksum = m_Crc8.maxim (&byteValue, 1);
+  uint8_t  byteValue = 0;
+  uint16_t checksum = m_Crc16.modbus (&byteValue, 1);
   for (int index = 0; index < c_EepromConfigDataSize; index++)
   {
     byteValue = EEPROM.read (i_Address + index);
-    checksum = m_Crc8.maxim_upd (&byteValue, 1);
+    checksum = m_Crc16.modbus_upd (&byteValue, 1);
   }
-  if (checksum != configChecksumCRC8)
+  if (checksum != configChecksumCRC16)
     return ::EResult::FAIL_Device_ConfigChecksumWrong;
-  ::EResult result = CheckConfig (deviceId, checksumType);
-  if (result != ::EResult::SUCCESS)
-    return result;
 
-  m_DeviceIdsUsed = deviceIdsUsed;
-  m_MessageIdUsed = messageIdUsed;
-  m_TimestampUsed = timestampUsed;
-  m_DeviceId      = deviceId;
-  m_ChecksumType  = checksumType;
+  ::EResult result = CommonConstructor (deviceIdsUsed,
+                                        messageIdUsed,
+                                        timestampUsed,
+                                        deviceId,
+                                        checksumType);
 
-  return ::EResult::SUCCESS;
+  return result;
 }
